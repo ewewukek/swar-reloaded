@@ -10,12 +10,13 @@ import static org.lwjgl.opengl.GL20.*;
 
 import org.joml.Vector2f;
 
+import static ewewukek.swar.Constants.*;
 import static ewewukek.swar.Util.*;
 import static ewewukek.swar.Shader.*;
 
 public class Ship {
-    public static final float size = 25;
-    public static final float line_width = 25;
+    public static final float size = 15;
+    public static final float line_width = 20;
 
     public static final int vertexCount = 22;
     public static final int triangleCount = 21;
@@ -34,15 +35,102 @@ public class Ship {
     public float y;
     public float a;
 
-    public void draw() {
-        shader().setPosition(x, y);
-        shader().setRotation(a);
+    public float xv;
+    public float yv;
+    public float av;
 
+    public void turn_left(float delta) {
+        if (av > -max_angle_velocity) {
+            av -= turn_acceleration * delta;
+        } else {
+            av = -max_angle_velocity;
+        }
+    }
+
+    public void turn_right(float delta) {
+        if (av < max_angle_velocity) {
+            av += turn_acceleration * delta;
+        } else {
+            av = max_angle_velocity;
+        }
+    }
+
+    public void throttle(float delta) {
+        double speed_2 = xv * xv + yv * yv;
+        if (speed_2 < max_velocity * max_velocity) {
+            xv += Math.sin(a) * acceleration * delta;
+            yv += Math.cos(a) * acceleration * delta;
+        }
+    }
+
+    public void update(float delta) {
+        x += xv * delta;
+        y += yv * delta;
+        a += av * delta;
+
+        if (x < -base_width / 2) {
+            x += base_width;
+        }
+        if (x >= base_width / 2) {
+            x -= base_width;
+        }
+        if (y < -base_height / 2) {
+            y += base_height;
+        }
+        if (y >= base_height / 2) {
+            y -= base_height;
+        }
+
+        double speed = Math.sqrt(xv * xv + yv * yv);
+        if (speed < friction) {
+            xv = 0;
+            yv = 0;
+        } else {
+            xv *= (speed - friction * delta) / speed;
+            yv *= (speed - friction * delta) / speed;
+        }
+        if (Math.abs(av) < angle_friction) {
+            av = 0;
+        } else {
+            av -= Math.signum(av) * angle_friction;
+        }
+    }
+
+    public void draw() {
         glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
         glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 4, GL_FLOAT, false, 0, 0);
         glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
+
         glVertexAttrib4f(ATTRIBUTE_COLOR, cr, cg, cb, 1);
+        glDisableVertexAttribArray(ATTRIBUTE_COLOR);
+
+        glVertexAttrib1f(ATTRIBUTE_LINE_WIDTH, 0.5f);
+        glDisableVertexAttribArray(ATTRIBUTE_LINE_WIDTH);
+
+        glVertexAttrib1f(ATTRIBUTE_LINE_OFFSET, 0);
+        glDisableVertexAttribArray(ATTRIBUTE_LINE_OFFSET);
+
+        glVertexAttrib1f(ATTRIBUTE_GLOW_RADIUS, line_width);
+        glDisableVertexAttribArray(ATTRIBUTE_GLOW_RADIUS);
+
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_indices);
+
+        shader().setRotation(a);
+
+        for (int i = -1; i != 2; ++i) {
+            for (int j = -1; j != 2; ++j) {
+                if (x + i * base_width + size + line_width > -base_width / 2
+                 && x + i * base_width - size - line_width < base_width / 2
+                 && y + j * base_height + size + line_width > -base_height / 2
+                 && y + j * base_height - size - line_width < base_height / 2) {
+                    draw_at(x + i * base_width, y + j * base_height);
+                }
+            }
+        }
+    }
+
+    private void draw_at(float x, float y) {
+        shader().setPosition(x, y);
         glDrawElements(GL_TRIANGLES, triangleCount * 3, GL_UNSIGNED_INT, 0);
     }
 

@@ -11,12 +11,11 @@ import org.lwjgl.opengl.PixelFormat;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL20.*;
 
+import static ewewukek.swar.Constants.*;
 import static ewewukek.swar.Shader.*;
 
 public class Main {
     final String title = "swar";
-    final int base_width = 1024;
-    final int base_height = 768;
     int width = 1024;
     int height = 768;
 
@@ -54,16 +53,6 @@ public class Main {
         ship.cg = 0.4f;
         ship.cb = 0.4f;
 
-        Ship ship2 = new Ship();
-        ship2.cr = 0.4f;
-        ship2.cg = 0.4f;
-        ship2.cb = 1;
-
-        Ship ship3 = new Ship();
-        ship3.cr = 0.4f;
-        ship3.cg = 1;
-        ship3.cb = 0.4f;
-
         Ship.init();
         Stars.init(base_width, base_height);
 
@@ -78,27 +67,20 @@ public class Main {
 
             a += 0.005f;
 
-            ship.x = (float)Math.sin(Math.PI * a) * 192;
-            ship.y = (float)Math.cos(Math.PI * a) * 192;
-            ship.a = -a * 3f * (float)Math.PI;
+            // ship.x = (float)Math.sin(Math.PI * a) * 192;
+            // ship.y = (float)Math.cos(Math.PI * a) * 192;
+            // ship.a = -a * 3f * (float)Math.PI;
             ship.draw();
-
-            ship2.x = (float)Math.sin(-Math.PI * 1.2f * (a + 2.0f/3)) * 91;
-            ship2.y = (float)Math.cos(-Math.PI * 1.2f * (a + 2.0f/3)) * 91;
-            ship2.a = a * 2f * (float)Math.PI;
-            ship2.draw();
-
-            ship3.x = (float)Math.sin(Math.PI * 1.5f * (a + 4.0f/3)) * 283;
-            ship3.y = (float)Math.cos(Math.PI * 1.5f * (a + 4.0f/3)) * 238;
-            ship3.a = -a * 4f * (float)Math.PI;
-            ship3.draw();
 
             Display.update();
             Display.sync(60);
 
-            while(Keyboard.next()) {
+            // float delta = 1.0f / 60;
+            float delta = 1.0f;
+
+            while (Keyboard.next()) {
                 int code = Keyboard.getEventKey();
-                if(Keyboard.getEventKeyState()) {
+                if (Keyboard.getEventKeyState()) {
                     keyPressed[code] = true;
 
                     switch(code) {
@@ -110,6 +92,17 @@ public class Main {
                     keyPressed[code] = false;
                 }
             }
+            if (keyPressed[Keyboard.KEY_UP]) {
+                ship.throttle(delta);
+            }
+            if (keyPressed[Keyboard.KEY_LEFT]) {
+                ship.turn_left(delta);
+            }
+            if (keyPressed[Keyboard.KEY_RIGHT]) {
+                ship.turn_right(delta);
+            }
+
+            ship.update(delta);
         }
         Display.destroy();
         System.exit(0);
