@@ -94,7 +94,6 @@ public class Shader {
         fs = glCreateShader(GL_FRAGMENT_SHADER);
         glShaderSource(fs,
             "#version 120\n"+
-            // "precision float highp;\n"+
             "varying vec2 l;\n"+
             "varying vec4 c;\n"+
             "uniform float line_offst;\n"+
