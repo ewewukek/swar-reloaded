@@ -19,6 +19,9 @@ import org.lwjgl.BufferUtils;
 
 import org.joml.Vector2f;
 
+import static ewewukek.swar.Util.*;
+import static ewewukek.swar.Shader.*;
+
 public class Main {
     final String title = "swar";
     final int base_width = 1024;
@@ -26,16 +29,7 @@ public class Main {
     int width = 1024;
     int height = 768;
 
-    final int ATTRIBUTE_POSITION_LINEDIR = 0;
-
     boolean[] keyPressed = new boolean[1024];
-
-    private Vector2f intersect(float l1x, float l1y, float l2x, float l2y) {
-        float d = l1x*l2y - l2x*l1y;
-        float a1 = l1x*l1x + l1y*l1y;
-        float a2 = l2x*l2x + l2y*l2y;
-        return new Vector2f( (a1*l2y - a2*l1y) / d, (l1x*a1 - l2x*a2) / d );
-    }
 
     private void loop() throws LWJGLException {
         Display.setTitle(title);
@@ -55,55 +49,7 @@ public class Main {
 
         resize();
 
-        int vs = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vs,
-            "#version 120\n"+
-            "attribute vec4 position_linedir;\n"+
-            "varying vec2 l;\n"+
-            "uniform vec2 camera_scale;\n"+
-            "void main() {\n"+
-            "l = position_linedir.zw;\n"+
-            "gl_Position = vec4(position_linedir.xy * camera_scale, 0.0, 1.0);\n"+
-            "}"
-        );
-        glCompileShader(vs);
-        if (glGetShaderi(vs, GL_COMPILE_STATUS) != GL_TRUE) {
-            System.err.println("vs: "+glGetShaderInfoLog(vs, glGetShaderi(vs, GL_INFO_LOG_LENGTH)));
-            System.exit(1);
-        }
-
-        int fs = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fs,
-            "#version 120\n"+
-            "varying vec2 l;\n"+
-            "void main() {\n"+
-            "float a = min(sqrt(l.x * l.x + l.y * l.y) / 25.0, 1.0);\n"+
-            // "a = round(a * 4.0) / 4.0;\n"+
-            // "a = (1.0 - a) / (1.0 + 10 * a);\n"+
-            "a = 1.0 - a;\n"+
-            // "gl_FragColor = vec4(a, 1.0 - a, 0.0, 1.0);\n"+
-            "gl_FragColor = vec4(1.0, 1.0, 1.0, a);\n"+
-            "}"
-        );
-        glCompileShader(fs);
-        glCompileShader(fs);
-        if (glGetShaderi(fs, GL_COMPILE_STATUS) != GL_TRUE) {
-            System.err.println("fs: "+glGetShaderInfoLog(fs, glGetShaderi(fs, GL_INFO_LOG_LENGTH)));
-            System.exit(1);
-        }
-
-        int shader = glCreateProgram();
-        glAttachShader(shader, vs);
-        glAttachShader(shader, fs);
-        glBindAttribLocation(shader, ATTRIBUTE_POSITION_LINEDIR, "position_linedir");
-        glLinkProgram(shader);
-        if (glGetProgrami(shader, GL_LINK_STATUS) != GL_TRUE) {
-            System.err.println("fs: "+glGetProgramInfoLog(shader, glGetProgrami(shader, GL_INFO_LOG_LENGTH)));
-            System.exit(1);
-        }
-        glUseProgram(shader);
-
-        int uniform_camera_scale = glGetUniformLocation(shader, "camera_scale");
+        shader().use();
 
         float s = 25.0f;
         float lw = 25.0f;
@@ -199,16 +145,26 @@ public class Main {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
 
+        float a = 0;
+
         while (!Display.isCloseRequested()) {
             if (Display.wasResized()) resize();
 
             glClear(GL_COLOR_BUFFER_BIT);
 
-            glUseProgram(shader);
-            glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
-            glUniform2f(uniform_camera_scale, 20.0f/base_width, 20.0f/base_height);
+            shader().setScale(2.0f / base_width, 2.0f / base_height);
+
+            a += 0.005f;
+
+            shader().setPosition((float)Math.sin(Math.PI * a) * 192, (float)Math.cos(Math.PI * a) * 192);
+            shader().setRotation(-a * 3f * (float)Math.PI);
+            // shader().setRotation((float)Math.PI * 0.838f);
+
             glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
             glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 4, GL_FLOAT, false, 0, 0);
+            glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
+            glVertexAttrib4f(ATTRIBUTE_COLOR, 1.0f, 0.4f, 0.4f, 1);
+            // glVertexAttrib4f(ATTRIBUTE_COLOR, 1.0f, 0.0f, 0.0f, 1);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_indices);
             glDrawElements(GL_TRIANGLES, triangle_count * 3, GL_UNSIGNED_INT, 0);
 
