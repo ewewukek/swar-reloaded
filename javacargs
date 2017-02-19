@@ -1,0 +1,1 @@
+-source 1.7 -target 1.7 -d bin -cp jar/lwjgl.jar:jar/joml.jar -sourcepath src -d bin
