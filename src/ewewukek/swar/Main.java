@@ -26,8 +26,7 @@ public class Main {
     int width = 1024;
     int height = 768;
 
-    final int ATTRIBUTE_POSITION = 0;
-    final int ATTRIBUTE_LINEDIR = 1;
+    final int ATTRIBUTE_POSITION_LINEDIR = 0;
 
     boolean[] keyPressed = new boolean[1024];
 
@@ -59,13 +58,12 @@ public class Main {
         int vs = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vs,
             "#version 120\n"+
-            "attribute vec2 position;\n"+
-            "attribute vec2 linedir;\n"+
+            "attribute vec4 position_linedir;\n"+
             "varying vec2 l;\n"+
             "uniform vec2 camera_scale;\n"+
             "void main() {\n"+
-            "l = linedir;\n"+
-            "gl_Position = vec4(position * camera_scale, 0.0, 1.0);\n"+
+            "l = position_linedir.zw;\n"+
+            "gl_Position = vec4(position_linedir.xy * camera_scale, 0.0, 1.0);\n"+
             "}"
         );
         glCompileShader(vs);
@@ -97,7 +95,7 @@ public class Main {
         int shader = glCreateProgram();
         glAttachShader(shader, vs);
         glAttachShader(shader, fs);
-        glBindAttribLocation(shader, ATTRIBUTE_POSITION, "position");
+        glBindAttribLocation(shader, ATTRIBUTE_POSITION_LINEDIR, "position_linedir");
         glLinkProgram(shader);
         if (glGetProgrami(shader, GL_LINK_STATUS) != GL_TRUE) {
             System.err.println("fs: "+glGetProgramInfoLog(shader, glGetProgrami(shader, GL_INFO_LOG_LENGTH)));
@@ -106,7 +104,6 @@ public class Main {
         glUseProgram(shader);
 
         int uniform_camera_scale = glGetUniformLocation(shader, "camera_scale");
-        int uniform_camera_position = glGetUniformLocation(shader, "camera_position");
 
         float s = 25.0f;
         float lw = 25.0f;
@@ -175,7 +172,6 @@ public class Main {
         ib.put(0);  ib.put(3);  ib.put(17);
         ib.put(0);  ib.put(17); ib.put(4);
         float cy = y[1] - v1.y * (x[1] / v1.x);
-        System.out.println(cy);
         float n1mul = (x[0] * n1.x + (y[0] - cy) * n1.y) / (lw * lw);
         float n2mul = (x[2] * n2.x + (y[2] - cy) * n2.y) / (lw * lw);
         fb.put(0);  fb.put(cy); fb.put(-n1.x * n1mul);  fb.put(-n1.y * n1mul);  // 18
@@ -209,12 +205,10 @@ public class Main {
             glClear(GL_COLOR_BUFFER_BIT);
 
             glUseProgram(shader);
-            glEnableVertexAttribArray(ATTRIBUTE_POSITION);
-            glEnableVertexAttribArray(ATTRIBUTE_LINEDIR);
+            glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
             glUniform2f(uniform_camera_scale, 20.0f/base_width, 20.0f/base_height);
             glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
-            glVertexAttribPointer(ATTRIBUTE_POSITION, 2, GL_FLOAT, false, 4 * 4, 0);
-            glVertexAttribPointer(ATTRIBUTE_LINEDIR, 2, GL_FLOAT, false, 4 * 4, 2 * 4);
+            glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 4, GL_FLOAT, false, 0, 0);
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_indices);
             glDrawElements(GL_TRIANGLES, triangle_count * 3, GL_UNSIGNED_INT, 0);
 
