@@ -50,7 +50,8 @@ build)
         echo "build: up-to-date"
         exit
     fi
-    javac @javacargs @$TMP/srclist
+    if [ -n "$JAVA7_HOME" ]; then bootclasspath="-bootclasspath $JAVA7_HOME/lib/rt.jar"; fi
+    javac @javacargs $bootclasspath @$TMP/srclist
     ;;
 *)
     echo "usage: ./make.sh [command]"

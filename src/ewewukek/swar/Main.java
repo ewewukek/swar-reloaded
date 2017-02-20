@@ -13,6 +13,7 @@ import static org.lwjgl.opengl.GL20.*;
 
 import static ewewukek.swar.Constants.*;
 import static ewewukek.swar.Shader.*;
+import ewewukek.swar.Particle;
 
 public class Main {
     final String title = "swar";
@@ -64,6 +65,7 @@ public class Main {
             shader().setScale(2.0f / base_width, 2.0f / base_height);
 
             Stars.draw();
+            Particle.drawAll();
 
             a += 0.005f;
 
@@ -103,6 +105,7 @@ public class Main {
             }
 
             ship.update(delta);
+            Particle.updateAll(delta);
         }
         Display.destroy();
         System.exit(0);

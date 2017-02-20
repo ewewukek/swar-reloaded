@@ -14,6 +14,9 @@ import static ewewukek.swar.Constants.*;
 import static ewewukek.swar.Util.*;
 import static ewewukek.swar.Shader.*;
 
+import ewewukek.swar.Particle;
+import ewewukek.swar.particle.Exhaust;
+
 public class Ship {
     public static final float size = 15;
     public static final float line_width = 20;
@@ -58,9 +61,15 @@ public class Ship {
     public void throttle(float delta) {
         double speed_2 = xv * xv + yv * yv;
         if (speed_2 < max_velocity * max_velocity) {
-            xv += Math.sin(a) * acceleration * delta;
-            yv += Math.cos(a) * acceleration * delta;
+            xv += (float)Math.sin(a) * acceleration * delta;
+            yv += (float)Math.cos(a) * acceleration * delta;
         }
+        Particle.add(new Exhaust(
+            x - (float)Math.sin(a) * size * 0.5f,
+            y - (float)Math.cos(a) * size * 0.5f,
+            -(float)Math.sin(a) * max_velocity,
+            -(float)Math.cos(a) * max_velocity
+        ));
     }
 
     public void update(float delta) {
