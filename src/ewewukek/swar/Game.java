@@ -11,23 +11,39 @@ import org.lwjgl.opengl.PixelFormat;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL20.*;
 
-import static ewewukek.swar.Constants.*;
-import static ewewukek.swar.Shader.*;
-import ewewukek.swar.Particle;
+import java.util.Random;
 
-public class Main {
+public class Game {
     final String title = "swar";
-    int width = 1024;
-    int height = 768;
+    private int width = 1024;
+    private int height = 768;
 
-    boolean[] keyPressed = new boolean[1024];
+    public static final int WIDTH = 1024;
+    public static final int HEIGHT = 768;
+
+    private boolean[] keyPressed = new boolean[1024];
+
+    public final int starCount = 512;
+    private float[] starX = new float[starCount];
+    private float[] starY = new float[starCount];
+    private float[] starLuminosity = new float[starCount];
+
+    public static final Random rnd = new Random();
+
+    public Game() {
+        for (int i = 0; i != starCount; ++i) {
+            starX[i] = (rnd.nextFloat() - 0.5f) * WIDTH;
+            starY[i] = (rnd.nextFloat() - 0.5f) * HEIGHT;
+            starLuminosity[i] = 0.125f + rnd.nextFloat() * 0.875f;
+        }
+    }
 
     private void loop() throws LWJGLException {
         Display.setTitle(title);
         Display.setResizable(true);
         Display.setVSyncEnabled(true);
         Display.setFullscreen(false);
-        Display.setDisplayMode(new DisplayMode(width, height));
+        Display.setDisplayMode(new DisplayMode(WIDTH, HEIGHT));
         Display.create(
             new PixelFormat(),
             new ContextAttribs(2, 1)
@@ -40,39 +56,42 @@ public class Main {
 
         resize();
 
-        shader().use();
+        Batch batch = new Batch(WIDTH, HEIGHT);
 
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
 
-        float a = 0;
-
         Ship ship = new Ship();
-        ship.cr = 1;
-        ship.cg = 0.4f;
-        ship.cb = 0.4f;
-
-        Ship.init();
-        Stars.init(base_width, base_height);
 
         while (!Display.isCloseRequested()) {
             if (Display.wasResized()) resize();
 
             glClear(GL_COLOR_BUFFER_BIT);
 
-            shader().setScale(2.0f / base_width, 2.0f / base_height);
+            batch.clear();
 
-            Stars.draw();
-            Particle.drawAll();
+            batch.setPosition(0, 0);
+            batch.setRotation(0);
+            batch.setLineWidth(0);
+            batch.setLineOffset(0);
+            batch.setGlowRadius(10);
+            batch.setFalloffMultiplier(10);
+            batch.setGlowShift(0, 0);
+            for (int i = 0; i != starCount; ++i) {
+                float c = starLuminosity[i] * (rnd.nextFloat() * 0.2f + 0.8f);
+                float redShift = rnd.nextFloat() * 0.3f + 0.7f;
+                float greenShift = rnd.nextFloat() * 0.1f + 0.9f;
+                float blueShift = rnd.nextFloat() * 0.2f + 0.8f;
+                batch.setColor(redShift * c, greenShift * c, blueShift * c, 1);
+                batch.addPoint(starX[i], starY[i]);
+            }
 
-            a += 0.005f;
+            ship.draw(batch);
 
-            // ship.x = (float)Math.sin(Math.PI * a) * 192;
-            // ship.y = (float)Math.cos(Math.PI * a) * 192;
-            // ship.a = -a * 3f * (float)Math.PI;
-            ship.draw();
+            batch.draw();
+            // batch.drawWireframe();
 
             Display.update();
             Display.sync(60);
@@ -105,18 +124,17 @@ public class Main {
             }
 
             ship.update(delta);
-            Particle.updateAll(delta);
         }
         Display.destroy();
         System.exit(0);
     }
 
     protected void resize() {
-        float scale_x = (float)Display.getWidth() / base_width;
-        float scale_y = (float)Display.getHeight() / base_height;
+        float scale_x = (float)Display.getWidth() / WIDTH;
+        float scale_y = (float)Display.getHeight() / HEIGHT;
         float scale = scale_x < scale_y ? scale_x : scale_y;
-        width = (int)(base_width * scale);
-        height = (int)(base_height * scale);
+        width = (int)(WIDTH * scale);
+        height = (int)(HEIGHT * scale);
         int offset_x = (Display.getWidth() - width) / 2;
         int offset_y = (Display.getHeight() - height) / 2;
         glViewport(offset_x, offset_y, width, height);
@@ -125,7 +143,7 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("LWJGL "+Sys.getVersion());
         try {
-            new Main().loop();
+            new Game().loop();
         } catch(LWJGLException e) {
             e.printStackTrace();
         }
