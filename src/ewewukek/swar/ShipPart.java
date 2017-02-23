@@ -1,13 +1,11 @@
 package ewewukek.swar;
 
+import static ewewukek.swar.Util.*;
+
 public class ShipPart extends Entity {
     private float luminosity;
 
-    private float colorR;
-    private float colorG;
-    private float colorB;
-    private float colorA;
-    
+    private int team;
     private float x1;
     private float y1;
     private float x2;
@@ -15,7 +13,7 @@ public class ShipPart extends Entity {
 
     public ShipPart(float x, float y, float a,
                     float xv, float yv, float av,
-                    float cr, float cg, float cb, float ca,
+                    int team,
                     float x1, float y1, float x2, float y2) {
         x1 += x;
         y1 += y;
@@ -27,10 +25,7 @@ public class ShipPart extends Entity {
         this.xv = xv;
         this.yv = yv;
         this.av = av;
-        this.colorR = cr;
-        this.colorG = cg;
-        this.colorB = cb;
-        this.colorA = ca;
+        this.team = team;
         this.x1 = x1 - this.x;
         this.y1 = y1 - this.y;
         this.x2 = x2 - this.x;
@@ -39,23 +34,26 @@ public class ShipPart extends Entity {
     }
 
     @Override
-    public boolean update(float delta) {
-        super.update(delta);
-        luminosity -= 0.02f * delta;
+    public boolean update() {
+        super.update();
+        luminosity -= 0.02f;
         return luminosity > 0;
     }
 
     @Override
     public void draw(Batch batch) {
-        batch.setLineWidth(0.25f);
-        batch.setLineOffset(0);
-        batch.setGlowRadius(20);
-        batch.setFalloffMultiplier(7.5f);
+        batch.setDefaults();
+        batch.setOrigin(x, y);
         batch.setRotation(a);
-        batch.setPosition(x, y);
-        batch.setGlowShift(-xv, -yv);
         float cm = Math.min(1, luminosity);
-        batch.setColor(colorR * cm, colorG * cm, colorB * cm, colorA);
+        batch.setColor(
+            Ship.teamColorR[team] * cm,
+            Ship.teamColorG[team] * cm,
+            Ship.teamColorB[team] * cm,
+            1
+        );
+        batch.setLineParams(0.5f, 0, Ship.glowRadius, Ship.falloffMultiplier);
+        batch.setGlowShift(-xv, -yv);
         batch.addLine(x1, y1, x2, y2);
     }
 }

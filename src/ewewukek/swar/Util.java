@@ -1,8 +1,14 @@
 package ewewukek.swar;
 
+import java.util.Random;
+
 import org.joml.Vector2f;
 
 public class Util {
+    private static final Random random = new Random();
+
+    public static float rand() { return random.nextFloat(); }
+
     public static Vector2f intersect(float l1x, float l1y, float l2x, float l2y) {
         float d = l1x*l2y - l2x*l1y;
         float a1 = l1x*l1x + l1y*l1y;

@@ -9,27 +9,19 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 
 public class Batch {
-    public static final int ATTRIBUTE_POSITION_LINEDIR = 0;
-    public static final int ATTRIBUTE_COLOR = 1;
-    public static final int ATTRIBUTE_LINE_WIDTH = 2;
-    public static final int ATTRIBUTE_LINE_OFFSET = 3;
-    public static final int ATTRIBUTE_GLOW_RADIUS = 4;
-    public static final int ATTRIBUTE_FALLOFF_MULTIPLIER = 5;
+    private static final int ATTRIBUTE_POSITION_LINEDIR = 0;
+    private static final int ATTRIBUTE_COLOR = 1;
+    private static final int ATTRIBUTE_LINE_WIDTH = 2;
+    private static final int ATTRIBUTE_LINE_OFFSET = 3;
+    private static final int ATTRIBUTE_GLOW_RADIUS = 4;
+    private static final int ATTRIBUTE_FALLOFF_MULTIPLIER = 5;
 
     private static int fs;
     private static int vs;
     private static int program;
 
-    private static int fsl;
-    private static int vsl;
-    private static int programl;
-
-    private int screenWidth = 1024;
-    private int screenHeight = 768;
-
-    public static final int vertexCapacity = 1024;
-    public static final int triangleCapacity = 1024;
-    public static final int lineCapacity = triangleCapacity * 3;
+    private static final int vertexCapacity = 10240;
+    private static final int triangleCapacity = 10240;
 
     private FloatBuffer fb = BufferUtils.createFloatBuffer(vertexCapacity * 12);
     private int vertexCount;
@@ -39,81 +31,55 @@ public class Batch {
     private int triangleCount;
     private int vboIndices;
 
-    private IntBuffer ibl = BufferUtils.createIntBuffer(lineCapacity * 2);
-    private int lineCount;
-    private int vboIndicesl;
-
-    private float lineWidth = 0.5f;
-    private float lineOffset = 0;
-    private float glowRadius = 10;
-    private float falloffMultiplier = 2;
-
-    private float colorR = 1;
-    private float colorG = 1;
-    private float colorB = 1;
-    private float colorA = 1;
-
-    private float rotSin = 0;
-    private float rotCos = 1;
-
-    private float xScale = 1;
-    private float yScale = 1;
-
-    private float xOrigin = 0;
-    private float yOrigin = 0;
-
-    private float glowShiftX = 0;
-    private float glowShiftY = 0;
-
-    public void setColor(float r, float g, float b, float a) {
-        colorR = r;
-        colorG = g;
-        colorB = b;
-        colorA = a;
-    }
-
-    public void setLineWidth(float lw) {
-        lineWidth = lw;
-    }
-
-    public void setLineOffset(float lo) {
-        lineOffset = lo;
-    }
-
-    public void setGlowRadius(float g) {
-        glowRadius = g;
-    }
-
-    public void setFalloffMultiplier(float f) {
-        falloffMultiplier = f;
-    }
-
-    public void setGlowShift(float x, float y) {
-        glowShiftX = x;
-        glowShiftY = y;
-    }
-
-    public Batch(int width, int height) {
-        screenWidth = width;
-        screenHeight = height;
-        xScale = 2.0f / screenWidth;
-        yScale = 2.0f / screenHeight;
-        init();
-    }
-
     private boolean uploaded;
 
-    public void clear() {
-        fb.clear();
-        vertexCount = 0;
-        ib.clear();
-        triangleCount = 0;
-        ibl.clear();
-        lineCount = 0;
-        uploaded = false;
+    private float lineWidth;
+    private float lineOffset;
+    private float glowRadius;
+    private float falloffMultiplier;
+
+    private float colorR;
+    private float colorG;
+    private float colorB;
+    private float colorA;
+
+    private float xOrigin;
+    private float yOrigin;
+
+    private float xScale;
+    private float yScale;
+
+    private float rotSin;
+    private float rotCos;
+
+    private float glowShiftX;
+    private float glowShiftY;
+
+    public Batch(int width, int height) {
+        init();
+        xScale = 2.0f / width;
+        yScale = 2.0f / height;
+        setDefaults();
     }
 
-    public void setPosition(float x, float y) {
+    public void setDefaults() {
+        xOrigin = 0;
+        yOrigin = 0;
+        rotSin = 0;
+        rotCos = 1;
+        colorR = 1;
+        colorG = 1;
+        colorB = 1;
+        colorA = 1;
+        lineWidth = 0.5f;
+        lineOffset = 0;
+        glowRadius = 10;
+        falloffMultiplier = 10;
+        glowShiftX = 0;
+        glowShiftY = 0;
+    }
+
+    public void setOrigin(float x, float y) {
         xOrigin = x;
         yOrigin = y;
     }
@@ -123,34 +89,31 @@ public class Batch {
         rotCos = (float)Math.cos(rad);
     }
 
-    private void putX(float x) {
-        
-        fb.put((x + xOrigin) * 2 / screenWidth);
+    public void setColor(float r, float g, float b, float a) {
+        colorR = r;
+        colorG = g;
+        colorB = b;
+        colorA = a;
     }
 
-    private void putY(float y) {
-        fb.put((y + yOrigin) * 2 / screenHeight);
+    public void setLineParams(float lw, float lo, float g, float fm) {
+        lineWidth = lw;
+        lineOffset = lo;
+        glowRadius = g;
+        falloffMultiplier = fm;
     }
 
-    private void putPosition(float x, float y, float ox, float oy, float gs) {
-        fb.put( ( rotCos * (x + ox) + rotSin * (y + oy) + xOrigin + glowShiftX * gs) * 2 / screenWidth );
-        fb.put( (-rotSin * (x + ox) + rotCos * (y + oy) + yOrigin + glowShiftY * gs) * 2 / screenHeight );
+    public void setGlowShift(float x, float y) {
+        glowShiftX = x;
+        glowShiftY = y;
     }
 
-    private void putLinedir(float x, float y) {
-        fb.put( rotCos * x + rotSin * y );
-        fb.put(-rotSin * x + rotCos * y );
-    }
-
-    private void putProperties() {
-        fb.put(colorR);
-        fb.put(colorG);
-        fb.put(colorB);
-        fb.put(colorA);
-        fb.put(lineWidth);
-        fb.put(lineOffset);
-        fb.put(glowRadius);
-        fb.put(falloffMultiplier);
+    public void clear() {
+        fb.clear();
+        vertexCount = 0;
+        ib.clear();
+        triangleCount = 0;
+        uploaded = false;
     }
 
     public void addPoint(float x, float y) {
@@ -163,15 +126,6 @@ public class Batch {
             0, 3, 4,
             0, 4, 1
         };
-        final int[] lines = new int[] {
-            1, 3,
-            2, 4,
-            1, 2,
-            2, 3,
-            3, 4,
-            4, 1
-        };
-
         if (vertexCount + 5 >= vertexCapacity || triangleCount + tris.length / 3 >= triangleCapacity) {
             draw();
             clear();
@@ -188,10 +142,6 @@ public class Batch {
             ib.put(i0 + tris[i]);
         }
         triangleCount += tris.length / 3;
-        for (int i = 0; i != lines.length; ++i) {
-            ibl.put(i0 + lines[i]);
-        }
-        lineCount += lines.length / 2;
     }
 
     public void addLine(float x1, float y1, float x2, float y2) {
@@ -210,50 +160,34 @@ public class Batch {
             5, 9, 1,
             5, 1, 0
         };
-        final int[] lines = new int[] {
-            3, 2,
-            4, 1,
-            6, 9,
-            7, 8,
-            3, 0,
-            3, 7,
-            2, 8,
-            0, 2,
-            0, 3,
-            5, 7,
-            5, 8
-        };
-
         if (vertexCount + 10 >= vertexCapacity || triangleCount + tris.length / 3 >= triangleCapacity) {
             draw();
             clear();
         }
         float ex = x2 - x1;
         float ey = y2 - y1;
-        float l = (float)Math.sqrt(ex*ex + ey*ey);
-        ex /= l;
-        ey /= l;
-        float nx = -ey;
-        float ny = ex;
+        float len = (float)Math.sqrt(ex*ex + ey*ey);
+        ex /= len;
+        ey /= len;
         float r = lineOffset + lineWidth + glowRadius;
         for (int i = 0; i != 5; ++i) {
             putPosition(
-                (ex * ae[i] + nx * an[i]) * r,
-                (ey * ae[i] + ny * an[i]) * r,
+                (ex * ae[i] - ey * an[i]) * r,
+                (ey * ae[i] + ex * an[i]) * r,
                 x1, y1, gs[i]);
             putLinedir(
-                (ex * ae[i] + nx * an[i]) * r,
-                (ey * ae[i] + ny * an[i]) * r);
+                (ex * ae[i] - ey * an[i]) * r,
+                (ey * ae[i] + ex * an[i]) * r);
             putProperties();
         }
         for (int i = 0; i != 5; ++i) {
             putPosition(
-                (-ex * ae[i] - nx * an[i]) * r,
-                (-ey * ae[i] - ny * an[i]) * r,
+                (-ex * ae[i] + ey * an[i]) * r,
+                (-ey * ae[i] - ex * an[i]) * r,
                 x2, y2, gs[i]);
             putLinedir(
-                (-ex * ae[i] - nx * an[i]) * r,
-                (-ey * ae[i] - ny * an[i]) * r);
+                (-ex * ae[i] + ey * an[i]) * r,
+                (-ey * ae[i] - ex * an[i]) * r);
             putProperties();
         }
         int i0 = vertexCount;
@@ -262,10 +196,6 @@ public class Batch {
             ib.put(i0 + tris[i]);
         }
         triangleCount += tris.length / 3;
-        for (int i = 0; i != lines.length; ++i) {
-            ibl.put(i0 + lines[i]);
-        }
-        lineCount += lines.length / 2;
     }
 
     public void addArrays(float[] x, float[] y, float[] lx, float[] ly, int[] tris, float[] gs) {
@@ -286,6 +216,41 @@ public class Batch {
         triangleCount += tris.length / 3;
     }
 
+    public void draw() {
+        if (triangleCount == 0) return;
+        upload();
+
+        glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 4, GL_FLOAT, false, 12 * 4, 0);
+        glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_FLOAT, false, 12 * 4, 4 * 4);
+        glVertexAttribPointer(ATTRIBUTE_LINE_WIDTH, 1, GL_FLOAT, false, 12 * 4, 8 * 4);
+        glVertexAttribPointer(ATTRIBUTE_LINE_OFFSET, 1, GL_FLOAT, false, 12 * 4, 9 * 4);
+        glVertexAttribPointer(ATTRIBUTE_GLOW_RADIUS, 1, GL_FLOAT, false, 12 * 4, 10 * 4);
+        glVertexAttribPointer(ATTRIBUTE_FALLOFF_MULTIPLIER, 1, GL_FLOAT, false, 12 * 4, 11 * 4);
+
+        glDrawElements(GL_TRIANGLES, 3 * triangleCount, GL_UNSIGNED_INT, 0);
+    }
+
+    private void putPosition(float x, float y, float ox, float oy, float gs) {
+        fb.put( ( rotCos * (x + ox) + rotSin * (y + oy) + xOrigin + glowShiftX * gs) * xScale );
+        fb.put( (-rotSin * (x + ox) + rotCos * (y + oy) + yOrigin + glowShiftY * gs) * yScale );
+    }
+
+    private void putLinedir(float x, float y) {
+        fb.put( rotCos * x + rotSin * y );
+        fb.put(-rotSin * x + rotCos * y );
+    }
+
+    private void putProperties() {
+        fb.put(colorR);
+        fb.put(colorG);
+        fb.put(colorB);
+        fb.put(colorA);
+        fb.put(lineWidth);
+        fb.put(lineOffset);
+        fb.put(glowRadius);
+        fb.put(falloffMultiplier);
+    }
+
     private void upload() {
         if (uploaded) return;
 
@@ -299,59 +264,7 @@ public class Batch {
         ib.flip();
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, ib, GL_DYNAMIC_DRAW);
 
-        if (vboIndicesl == 0) vboIndicesl = glGenBuffers();
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIndicesl);
-        ibl.flip();
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, ibl, GL_DYNAMIC_DRAW);
-
         uploaded = true;
-    }
-
-    public void draw() {
-        if (triangleCount == 0) return;
-        upload();
-
-        glUseProgram(program);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vboVertices);
-
-        glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 4, GL_FLOAT, false, 12 * 4, 0);
-        glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
-
-        glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_FLOAT, false, 12 * 4, 4 * 4);
-        glEnableVertexAttribArray(ATTRIBUTE_COLOR);
-
-        glVertexAttribPointer(ATTRIBUTE_LINE_WIDTH, 1, GL_FLOAT, false, 12 * 4, 8 * 4);
-        glEnableVertexAttribArray(ATTRIBUTE_LINE_WIDTH);
-
-        glVertexAttribPointer(ATTRIBUTE_LINE_OFFSET, 1, GL_FLOAT, false, 12 * 4, 9 * 4);
-        glEnableVertexAttribArray(ATTRIBUTE_LINE_OFFSET);
-
-        glVertexAttribPointer(ATTRIBUTE_GLOW_RADIUS, 1, GL_FLOAT, false, 12 * 4, 10 * 4);
-        glEnableVertexAttribArray(ATTRIBUTE_GLOW_RADIUS);
-
-        glVertexAttribPointer(ATTRIBUTE_FALLOFF_MULTIPLIER, 1, GL_FLOAT, false, 12 * 4, 11 * 4);
-        glEnableVertexAttribArray(ATTRIBUTE_FALLOFF_MULTIPLIER);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIndices);
-
-        glDrawElements(GL_TRIANGLES, 3 * triangleCount, GL_UNSIGNED_INT, 0);
-    }
-
-    public void drawWireframe() {
-        if (lineCount == 0) return;
-        upload();
-
-        glUseProgram(programl);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vboVertices);
-
-        glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 2, GL_FLOAT, false, 12 * 4, 0);
-        glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIndicesl);
-
-        glDrawElements(GL_LINES, 2 * lineCount, GL_UNSIGNED_INT, 0);
     }
 
     private static boolean _init;
@@ -409,41 +322,23 @@ public class Batch {
         program = glCreateProgram();
         glAttachShader(program, vs);
         glAttachShader(program, fs);
+
         glBindAttribLocation(program, ATTRIBUTE_POSITION_LINEDIR, "position_linedir");
         glBindAttribLocation(program, ATTRIBUTE_COLOR, "color");
         glBindAttribLocation(program, ATTRIBUTE_LINE_WIDTH, "line_width");
         glBindAttribLocation(program, ATTRIBUTE_LINE_OFFSET, "line_offset");
         glBindAttribLocation(program, ATTRIBUTE_GLOW_RADIUS, "glow_radius");
         glBindAttribLocation(program, ATTRIBUTE_FALLOFF_MULTIPLIER, "falloffMultiplier");
+
         glLinkProgram(program);
+        glUseProgram(program);
 
-        vsl = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vsl,
-            "#version 120\n"+
-            "attribute vec2 position;\n"+
-            "void main() {\n"+
-            "gl_Position = vec4(position, 0.0, 1.0);\n"+
-            "}"
-        );
-        glCompileShader(vsl);
-        assertShaderCompileStatus(vsl);
-
-        fsl = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fsl,
-            "#version 120\n"+
-            "void main() {\n"+
-            "gl_FragColor = vec4(0.0, 0.5, 0.0, 1.0);\n"+
-            "}"
-        );
-        glCompileShader(fsl);
-        assertShaderCompileStatus(fsl);
-
-        programl = glCreateProgram();
-        glAttachShader(programl, vsl);
-        glAttachShader(programl, fsl);
-        glBindAttribLocation(programl, ATTRIBUTE_POSITION_LINEDIR, "position");
-        glLinkProgram(programl);
-        assertProgramLinkStatus(programl);
+        glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
+        glEnableVertexAttribArray(ATTRIBUTE_COLOR);
+        glEnableVertexAttribArray(ATTRIBUTE_LINE_WIDTH);
+        glEnableVertexAttribArray(ATTRIBUTE_LINE_OFFSET);
+        glEnableVertexAttribArray(ATTRIBUTE_GLOW_RADIUS);
+        glEnableVertexAttribArray(ATTRIBUTE_FALLOFF_MULTIPLIER);
     }
 
     private static void assertShaderCompileStatus(int shader) {

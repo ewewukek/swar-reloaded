@@ -9,10 +9,10 @@ public abstract class Entity {
     protected float yv;
     protected float av;
 
-    public boolean update(float delta) {
-        x += xv * delta;
-        y += yv * delta;
-        a += av * delta;
+    public boolean update() {
+        x += xv;
+        y += yv;
+        a += av;
         return true;
     }
 

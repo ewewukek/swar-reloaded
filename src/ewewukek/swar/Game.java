@@ -14,19 +14,18 @@ import static org.lwjgl.opengl.GL20.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
+
+import static ewewukek.swar.Util.*;
 
 public class Game {
-    final String title = "swar";
-    private int width = 1024;
-    private int height = 768;
-
     public static final int WIDTH = 1024;
     public static final int HEIGHT = 768;
 
+    private final String title = "swar";
+
     private boolean[] keyPressed = new boolean[1024];
 
-    public final int starCount = 512;
+    private final int starCount = 512;
     private float[] starX = new float[starCount];
     private float[] starY = new float[starCount];
     private float[] starLuminosity = new float[starCount];
@@ -34,18 +33,16 @@ public class Game {
     private static List<Entity> entities = new ArrayList<Entity>();
     private static List<Entity> newEntities = new ArrayList<Entity>();
 
-    public static final Random rnd = new Random();
-
-    public Game() {
-        for (int i = 0; i != starCount; ++i) {
-            starX[i] = (rnd.nextFloat() - 0.5f) * WIDTH;
-            starY[i] = (rnd.nextFloat() - 0.5f) * HEIGHT;
-            starLuminosity[i] = 0.125f + rnd.nextFloat() * 0.875f;
-        }
-    }
-
     public static void addEntity(Entity e) {
         newEntities.add(e);
+    }
+
+    private Game() {
+        for (int i = 0; i != starCount; ++i) {
+            starX[i] = (rand() - 0.5f) * WIDTH;
+            starY[i] = (rand() - 0.5f) * HEIGHT;
+            starLuminosity[i] = 0.125f + rand() * 0.875f;
+        }
     }
 
     private void loop() throws LWJGLException {
@@ -73,7 +70,7 @@ public class Game {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
 
-        Ship ship = new Ship();
+        Ship ship = new Ship(0);
 
         while (!Display.isCloseRequested()) {
             if (Display.wasResized()) resize();
@@ -82,18 +79,12 @@ public class Game {
 
             batch.clear();
 
-            batch.setPosition(0, 0);
-            batch.setRotation(0);
-            batch.setLineWidth(0);
-            batch.setLineOffset(0);
-            batch.setGlowRadius(10);
-            batch.setFalloffMultiplier(10);
-            batch.setGlowShift(0, 0);
+            batch.setDefaults();
             for (int i = 0; i != starCount; ++i) {
-                float c = starLuminosity[i] * (rnd.nextFloat() * 0.2f + 0.8f);
-                float redShift = rnd.nextFloat() * 0.3f + 0.7f;
-                float greenShift = rnd.nextFloat() * 0.1f + 0.9f;
-                float blueShift = rnd.nextFloat() * 0.2f + 0.8f;
+                float c = starLuminosity[i] * (rand() * 0.2f + 0.8f);
+                float redShift = rand() * 0.3f + 0.7f;
+                float greenShift = rand() * 0.1f + 0.9f;
+                float blueShift = rand() * 0.2f + 0.8f;
                 batch.setColor(redShift * c, greenShift * c, blueShift * c, 1);
                 batch.addPoint(starX[i], starY[i]);
             }
@@ -103,13 +94,9 @@ public class Game {
             drawEntities(batch);
 
             batch.draw();
-            // batch.drawWireframe();
 
             Display.update();
             Display.sync(60);
-
-            // float delta = 1.0f / 60;
-            float delta = 1.0f;
 
             while (Keyboard.next()) {
                 int code = Keyboard.getEventKey();
@@ -124,9 +111,17 @@ public class Game {
                         case Keyboard.KEY_RCONTROL:
                             ship.shoot();
                         break;
-                        case Keyboard.KEY_SPACE:
-                            ship.effectExplosion();
-                            ship.respawn(0, 0);
+                        case Keyboard.KEY_1:
+                            ship.setTeam(0);
+                        break;
+                        case Keyboard.KEY_2:
+                            ship.setTeam(1);
+                        break;
+                        case Keyboard.KEY_3:
+                            ship.setTeam(2);
+                        break;
+                        case Keyboard.KEY_4:
+                            ship.setTeam(3);
                         break;
                     }
                 } else {
@@ -134,17 +129,17 @@ public class Game {
                 }
             }
             if (keyPressed[Keyboard.KEY_UP]) {
-                ship.throttle(delta);
+                ship.throttle();
             }
             if (keyPressed[Keyboard.KEY_LEFT]) {
-                ship.turn_left(delta);
+                ship.turnLeft();
             }
             if (keyPressed[Keyboard.KEY_RIGHT]) {
-                ship.turn_right(delta);
+                ship.turnRight();
             }
 
-            ship.update(delta);
-            updateEntities(delta);
+            ship.update();
+            updateEntities();
             entities.addAll(newEntities);
             newEntities.clear();
         }
@@ -152,7 +147,7 @@ public class Game {
         System.exit(0);
     }
 
-    public static void drawEntities(Batch batch) {
+    private static void drawEntities(Batch batch) {
         Iterator<Entity> it = entities.iterator();
         while (it.hasNext()) {
             Entity e = (Entity)it.next();
@@ -160,22 +155,22 @@ public class Game {
         }
     }
 
-    public static void updateEntities(float delta) {
+    private static void updateEntities() {
         Iterator<Entity> it = entities.iterator();
         while (it.hasNext()) {
             Entity e = (Entity)it.next();
-            if (!e.update(delta)) {
+            if (!e.update()) {
                 it.remove();
             }
         }
     }
 
-    protected void resize() {
+    private void resize() {
         float scale_x = (float)Display.getWidth() / WIDTH;
         float scale_y = (float)Display.getHeight() / HEIGHT;
         float scale = scale_x < scale_y ? scale_x : scale_y;
-        width = (int)(WIDTH * scale);
-        height = (int)(HEIGHT * scale);
+        int width = (int)(WIDTH * scale);
+        int height = (int)(HEIGHT * scale);
         int offset_x = (Display.getWidth() - width) / 2;
         int offset_y = (Display.getHeight() - height) / 2;
         glViewport(offset_x, offset_y, width, height);

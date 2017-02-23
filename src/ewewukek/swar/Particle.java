@@ -2,7 +2,7 @@ package ewewukek.swar;
 
 public class Particle extends Entity {
     protected float luminosity;
-    protected float luminosityModifier = 0.05f;
+    protected float luminosityModifier;
 
     protected float colorR;
     protected float colorG;
@@ -12,23 +12,23 @@ public class Particle extends Entity {
     public Particle() {};
 
     public Particle(float x, float y, float a, float dist, float speed,
-                    float R, float G, float B, float A,
+                    float colorR, float colorG, float colorB, float colorA,
                     float luminosity, float luminosityModifier) {
         this.x = x + (float)Math.sin(a) * dist;
         this.y = y + (float)Math.cos(a) * dist;
-        this.xv = (float)Math.sin(a) * speed;
-        this.yv = (float)Math.cos(a) * speed;
-        colorR = R;
-        colorG = G;
-        colorB = B;
-        colorA = A;
+        xv = (float)Math.sin(a) * speed;
+        yv = (float)Math.cos(a) * speed;
+        this.colorR = colorR;
+        this.colorG = colorG;
+        this.colorB = colorB;
+        this.colorA = colorA;
         this.luminosity = luminosity;
         this.luminosityModifier = luminosityModifier;
     }
 
     @Override
-    public boolean update(float delta) {
-        super.update(delta);
+    public boolean update() {
+        super.update();
         xv *= 0.95f;
         yv *= 0.95f;
         luminosity -= luminosityModifier;
@@ -37,12 +37,8 @@ public class Particle extends Entity {
 
     @Override
     public void draw(Batch batch) {
-        batch.setPosition(x, y);
-        batch.setRotation(0);
-        batch.setLineWidth(0.5f);
-        batch.setLineOffset(0);
-        batch.setGlowRadius(10);
-        batch.setFalloffMultiplier(10);
+        batch.setDefaults();
+        batch.setOrigin(x, y);
         batch.setGlowShift(-xv, -yv);
         float cr = Math.min(colorR * luminosity, 1);
         float cg = Math.min(colorG * luminosity, 1);
