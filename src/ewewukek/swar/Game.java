@@ -11,6 +11,9 @@ import org.lwjgl.opengl.PixelFormat;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL20.*;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
 public class Game {
@@ -28,6 +31,9 @@ public class Game {
     private float[] starY = new float[starCount];
     private float[] starLuminosity = new float[starCount];
 
+    private static List<Entity> entities = new ArrayList<Entity>();
+    private static List<Entity> newEntities = new ArrayList<Entity>();
+
     public static final Random rnd = new Random();
 
     public Game() {
@@ -36,6 +42,10 @@ public class Game {
             starY[i] = (rnd.nextFloat() - 0.5f) * HEIGHT;
             starLuminosity[i] = 0.125f + rnd.nextFloat() * 0.875f;
         }
+    }
+
+    public static void addEntity(Entity e) {
+        newEntities.add(e);
     }
 
     private void loop() throws LWJGLException {
@@ -90,6 +100,8 @@ public class Game {
 
             ship.draw(batch);
 
+            drawEntities(batch);
+
             batch.draw();
             // batch.drawWireframe();
 
@@ -108,6 +120,14 @@ public class Game {
                         case Keyboard.KEY_ESCAPE:
                             System.exit(0);
                         break;
+                        case Keyboard.KEY_LCONTROL:
+                        case Keyboard.KEY_RCONTROL:
+                            ship.shoot();
+                        break;
+                        case Keyboard.KEY_SPACE:
+                            ship.effectExplosion();
+                            ship.respawn(0, 0);
+                        break;
                     }
                 } else {
                     keyPressed[code] = false;
@@ -124,9 +144,30 @@ public class Game {
             }
 
             ship.update(delta);
+            updateEntities(delta);
+            entities.addAll(newEntities);
+            newEntities.clear();
         }
         Display.destroy();
         System.exit(0);
+    }
+
+    public static void drawEntities(Batch batch) {
+        Iterator<Entity> it = entities.iterator();
+        while (it.hasNext()) {
+            Entity e = (Entity)it.next();
+            e.draw(batch);
+        }
+    }
+
+    public static void updateEntities(float delta) {
+        Iterator<Entity> it = entities.iterator();
+        while (it.hasNext()) {
+            Entity e = (Entity)it.next();
+            if (!e.update(delta)) {
+                it.remove();
+            }
+        }
     }
 
     protected void resize() {

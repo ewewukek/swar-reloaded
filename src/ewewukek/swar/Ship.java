@@ -1,18 +1,10 @@
 package ewewukek.swar;
 
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import org.lwjgl.BufferUtils;
-
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL15.*;
-import static org.lwjgl.opengl.GL20.*;
-
 import org.joml.Vector2f;
 
 import static ewewukek.swar.Util.*;
 
-public class Ship {
+public class Ship extends Entity {
     public static final float size = 17.5f;
     public static final float line_width = 25;
 
@@ -23,20 +15,14 @@ public class Ship {
     public static float friction = 0.08f;
     public static float angle_friction = (float)(Math.PI / 360);
 
+    private float shield;
+
     public Ship() {
     }
 
     public float cr = 1;
     public float cg = 1;
     public float cb = 1;
-
-    public float x;
-    public float y;
-    public float a;
-
-    public float xv;
-    public float yv;
-    public float av;
 
     public void turn_left(float delta) {
         if (av > -max_angle_velocity) {
@@ -63,18 +49,83 @@ public class Ship {
             xv *= max_velocity / speed;
             yv *= max_velocity / speed;
         }
-        // Particle.add(new Exhaust(
-            // x - (float)Math.sin(a) * size * 0.5f,
-            // y - (float)Math.cos(a) * size * 0.5f,
-            // -(float)Math.sin(a) * max_velocity,
-            // -(float)Math.cos(a) * max_velocity
-        // ));
+        effectExhaust();
     }
 
-    public void update(float delta) {
+    public void shoot() {
+        Game.addEntity(new Shot(
+            x,
+            y,
+            a,
+            size
+        ));
+    }
+
+    public void effectExhaust() {
+        Game.addEntity(new Particle(
+            x, y, a, -size * 0.5f, -max_velocity,
+            1.0f, 0.5f, 0.0f, 1.0f,
+            2.0f, 0.1f
+        ));
+    }
+
+    public void effectSpawn() {
+        for (int i = 0; i != 25; ++i) {
+            Game.addEntity(new Particle(
+                x, y, Game.rnd.nextFloat() * 2 * (float)Math.PI, Game.rnd.nextFloat() * 10, 1 + Game.rnd.nextFloat() * 2,
+                0.0f, 1.0f, 0.5f, 1.0f,
+                1 + Game.rnd.nextFloat() * 0.3f, 0.02f
+            ));
+        }
+    }
+
+    public void effectExplosion() {
+        for (int i = 0; i != 50; ++i) {
+            Game.addEntity(new Particle(
+                x, y, Game.rnd.nextFloat() * 2 * (float)Math.PI, Game.rnd.nextFloat() * 10, 1.5f + Game.rnd.nextFloat() * 2,
+                1.0f, 0.2f + Game.rnd.nextFloat() * 0.3f, 0.0f, 1.0f,
+                1.2f + Game.rnd.nextFloat() * 0.3f, 0.015f
+            ));
+        }
+        Game.addEntity(new ShipPart(
+            x, y, a,
+            (float)Math.sin(a + Math.PI * 0.375) + xv * 0.1f, (float)Math.cos(a + Math.PI * 0.375) + yv * 0.1f, (Game.rnd.nextFloat() - 0.5f) * 0.02f,
+            1.0f, 0.35f, 0.35f, 1.0f,
+            px[0], py[0], px[1], py[1]
+        ));
+        Game.addEntity(new ShipPart(
+            x, y, a,
+            (float)Math.sin(a - Math.PI * 0.375) + xv * 0.1f, (float)Math.cos(a - Math.PI * 0.375) + yv * 0.1f, (Game.rnd.nextFloat() - 0.5f) * 0.02f,
+            1.0f, 0.35f, 0.35f, 1.0f,
+            px[0], py[0], px[3], py[3]
+        ));
+        Game.addEntity(new ShipPart(
+            x, y, a,
+            (float)Math.sin(a + Math.PI * 0.875) + xv * 0.1f, (float)Math.cos(a + Math.PI * 0.875) + yv * 0.1f, (Game.rnd.nextFloat() - 0.5f) * 0.02f,
+            1.0f, 0.35f, 0.35f, 1.0f,
+            px[1], py[1], px[2], py[2]
+        ));
+        Game.addEntity(new ShipPart(
+            x, y, a,
+            (float)Math.sin(a - Math.PI * 0.875) + xv * 0.1f, (float)Math.cos(a - Math.PI * 0.875) + yv * 0.1f, (Game.rnd.nextFloat() - 0.5f) * 0.02f,
+            1.0f, 0.35f, 0.35f, 1.0f,
+            px[2], py[2], px[3], py[3]
+        ));
+    }
+
+    public void respawn(float x, float y) {
+        this.x = x;
+        this.y = y;
+        this.shield = 1.5f;
+        effectSpawn();
+    }
+
+    @Override
+    public boolean update(float delta) {
         x += xv * delta;
         y += yv * delta;
         a += av * delta;
+        if (shield > 0) shield -= 0.016f * delta;
 
         if (x < -Game.WIDTH / 2) {
             x += Game.WIDTH;
@@ -102,15 +153,16 @@ public class Ship {
         } else {
             av -= Math.signum(av) * angle_friction;
         }
+        return true;
     }
 
+    @Override
     public void draw(Batch batch) {
         batch.setColor(1, 0.35f, 0.35f, 1);
         batch.setLineWidth(0.5f);
         batch.setLineOffset(0);
         batch.setGlowRadius(line_width);
         batch.setFalloffMultiplier(6.5f);
-        batch.setGlowRadius(line_width);
         batch.setRotation(a);
         float s = Game.rnd.nextFloat();
         float dx = xv * (0.3f + s * 0.2f) * line_width / max_velocity;
@@ -126,6 +178,17 @@ public class Ship {
                     batch.addArrays(px, py, lx, ly, tris, gs);
                 }
             }
+        }
+        if (shield > 0) {
+            float cm = Math.min(1.0f, 2 * shield);
+            batch.setRotation(0);
+            batch.setLineWidth(0);
+            batch.setLineOffset(size + 10);
+            batch.setGlowRadius(10);
+            batch.setFalloffMultiplier(5);
+            batch.setColor(0, cm * 1, cm * 0.8f, 1);
+            batch.setGlowShift(0, 0);
+            batch.addPoint(0, 0);
         }
     }
 
