@@ -21,6 +21,7 @@ public class Ship extends Entity {
     public static final float[] teamColorG = new float[] { 0.35f, 0.5f, 0.7f, 0.7f };
     public static final float[] teamColorB = new float[] { 0.35f,    1, 0.1f,    0 };
 
+    private int hp;
     private int team;
     private float shieldTime;
 
@@ -36,10 +37,12 @@ public class Ship extends Entity {
         this.x = x;
         this.y = y;
         this.shieldTime = 1.5f;
+        this.hp = 2;
         effectSpawn();
     }
 
     public void turnLeft() {
+        if (hp < 1) return;
         if (av > -maxAngularVelocity) {
             av -= turnAcceleration;
         } else {
@@ -48,6 +51,7 @@ public class Ship extends Entity {
     }
 
     public void turnRight() {
+        if (hp < 1) return;
         if (av < maxAngularVelocity) {
             av += turnAcceleration;
         } else {
@@ -56,6 +60,7 @@ public class Ship extends Entity {
     }
 
     public void throttle() {
+        if (hp < 1) return;
         float speed = (float)Math.sqrt(xv * xv + yv * yv);
         if (speed < maxVelocity) {
             xv += (float)Math.sin(a) * acceleration;
@@ -68,11 +73,18 @@ public class Ship extends Entity {
     }
 
     public void shoot() {
+        if (hp < 1) return;
         Game.addEntity(new Shot(team, x, y, a, size));
+    }
+
+    public void kill() {
+        hp = 0;
+        effectExplosion();
     }
 
     @Override
     public boolean update() {
+        if (hp < 1) return true;
         super.update();
         if (x < -Game.WIDTH / 2) x += Game.WIDTH;
         if (x >= Game.WIDTH / 2) x -= Game.WIDTH;
@@ -97,13 +109,13 @@ public class Ship extends Entity {
 
     @Override
     public void draw(Batch batch) {
+        if (hp < 1) return;
         batch.setDefaults();
         batch.setRotation(a);
-        batch.setColor(teamColorR[team], teamColorG[team], teamColorB[team], 1);
-        batch.setLineParams(0.5f, 0, glowRadius, falloffMultiplier);
         float s = rand();
         float dx = xv * (0.3f + s * 0.2f) * glowRadius / maxVelocity;
         float dy = yv * (0.3f + s * 0.2f) * glowRadius / maxVelocity;
+        float cm = Math.min(1, 0.5f + 2 * shieldTime);
         for (int i = -1; i != 2; ++i) {
             for (int j = -1; j != 2; ++j) {
                 if (x + i * Game.WIDTH + size + glowRadius > -Game.WIDTH / 2
@@ -111,17 +123,18 @@ public class Ship extends Entity {
                  && y + j * Game.HEIGHT + size + glowRadius > -Game.HEIGHT / 2
                  && y + j * Game.HEIGHT - size - glowRadius < Game.HEIGHT / 2) {
                     batch.setOrigin(x + i * Game.WIDTH, y + j * Game.HEIGHT);
+                    batch.setColor(teamColorR[team], teamColorG[team], teamColorB[team], 1);
+                    batch.setLineParams(0.5f, 0, glowRadius, falloffMultiplier);
                     batch.setGlowShift(-dx, -dy);
                     batch.addArrays(px, py, lx, ly, tris, gs);
+                    if (shieldTime > 0) {
+                        batch.setColor(0, cm * 1, cm * 0.8f, 1);
+                        batch.setLineParams(0.5f, size + 10, 10, falloffMultiplier);
+                        batch.setGlowShift(0, 0);
+                        batch.addPoint(0, 0);
+                    }
                 }
             }
-        }
-        if (shieldTime > 0) {
-            batch.setDefaults();
-            float cm = Math.min(1, 0.5f + 2 * shieldTime);
-            batch.setColor(0, cm * 1, cm * 0.8f, 1);
-            batch.setLineParams(0.5f, size + 10, 10, falloffMultiplier);
-            batch.addPoint(0, 0);
         }
     }
 
@@ -139,7 +152,7 @@ public class Ship extends Entity {
                 x, y,
                 rand() * 2 * (float)Math.PI,
                 rand() * 10,
-                5 + rand() * 5,
+                1.5f + rand() * 2,
                 0, 1, 0.5f, 1,
                 1 + rand() * 0.3f, 0.02f
             ));
@@ -152,7 +165,7 @@ public class Ship extends Entity {
                 x, y,
                 rand() * 2 * (float)Math.PI,
                 rand() * 10,
-                1.5f + rand() * 2,
+                2 + rand() * 2,
                 1, 0.2f + rand() * 0.3f, 0, 1,
                 1.2f + rand() * 0.3f, 0.015f
             ));

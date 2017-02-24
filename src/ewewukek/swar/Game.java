@@ -71,6 +71,7 @@ public class Game {
         glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
 
         Ship ship = new Ship(0);
+        ship.spawnAt(0, 0);
 
         while (!Display.isCloseRequested()) {
             if (Display.wasResized()) resize();
@@ -122,6 +123,12 @@ public class Game {
                         break;
                         case Keyboard.KEY_4:
                             ship.setTeam(3);
+                        break;
+                        case Keyboard.KEY_K:
+                            ship.kill();
+                        break;
+                        case Keyboard.KEY_SPACE:
+                            ship.spawnAt(rand() * WIDTH / 2, rand() * HEIGHT / 2);
                         break;
                     }
                 } else {

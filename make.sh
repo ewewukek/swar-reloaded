@@ -16,12 +16,20 @@ run)
     java -cp jar/lwjgl.jar:jar/joml.jar:bin -Djava.library.path=native ewewukek/swar/Game
     ;;
 build)
-    # if [ ! -f jar/lwjgl.jar ]; then
-        # echo "build: downloading lwjgl-$LWJGL_VERSION"
-        # wget -q --show-progress -O $TMP/lwjgl.zip http://build.lwjgl.org/release/$LWJGL_VERSION/lwjgl-$LWJGL_VERSION.zip
-        # echo "build: extracting lwjgl-$LWJGL_VERSION"
-        # unzip -o $TMP/lwjgl.zip jar/* native/* -d . >/dev/null
-    # fi
+    if [ ! -f jar/lwjgl.jar ]; then
+        echo "build: downloading lwjgl-$LWJGL_VERSION"
+        wget -q --show-progress -O $TMP/lwjgl.zip https://downloads.sourceforge.net/project/java-game-lib/Official%20Releases/LWJGL%20$LWJGL_VERSION/lwjgl-$LWJGL_VERSION.zip
+        echo "build: extracting lwjgl-$LWJGL_VERSION"
+        unzip -j -o $TMP/lwjgl.zip lwjgl-$LWJGL_VERSION/jar/lwjgl.jar -d ./jar >/dev/null
+        if [[ "$OSTYPE" == "linux-gnu" ]]; then
+            OS_DIR=linux
+        elif [[ "$OSTYPE" == "cygwin" || "$OSTYPE" == "msys" ]]; then
+            OS_DIR=windows
+        elif [[ "$OSTYPE" == "darwin" ]]; then
+            OS_DIR=macosx
+        fi
+        unzip -j -o $TMP/lwjgl.zip lwjgl-$LWJGL_VERSION/native/$OS_DIR/* -d ./native >/dev/null
+    fi
     if [ ! -f jar/joml.jar ]; then
         echo "build: downloading joml-$JOML_VERSION"
         wget -q --show-progress -O jar/joml.jar https://github.com/JOML-CI/JOML/releases/download/$JOML_VERSION/joml-$JOML_VERSION.jar
