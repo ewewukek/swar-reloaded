@@ -9,12 +9,12 @@ public class Ship extends Entity {
     public static final float glowRadius = 25;
     public static final float falloffMultiplier = 6.5f;
 
-    public static final float turnAcceleration = (float)Math.PI / 100;
-    public static final float maxAngularVelocity = (float)Math.PI / 40;
     public static final float acceleration = 1;
-    public static final float maxVelocity = 4;
-    public static final float friction = 0.08f;
-    public static final float angularFriction = (float)Math.PI / 360;
+    public static final float maxVelocity = 10;
+    public static final float friction = 0.4f;
+    public static final float turnAcceleration = (float)Math.toRadians(3);
+    public static final float maxAngularVelocity = (float)Math.toRadians(15);
+    public static final float angularFriction = (float)Math.toRadians(3);
 
     public static final int teamCount = 4;
     public static final float[] teamColorR = new float[] {     1, 0.5f, 0.1f, 0.7f };
@@ -36,6 +36,8 @@ public class Ship extends Entity {
     public void spawnAt(float x, float y) {
         this.x = x;
         this.y = y;
+        this.xv = 0;
+        this.yv = 0;
         this.shieldTime = 1.5f;
         this.hp = 2;
         effectSpawn();
@@ -43,29 +45,22 @@ public class Ship extends Entity {
 
     public void turnLeft() {
         if (hp < 1) return;
-        if (av > -maxAngularVelocity) {
-            av -= turnAcceleration;
-        } else {
-            av = -maxAngularVelocity;
-        }
+        av -= turnAcceleration;
+        if (av < -maxAngularVelocity) av = -maxAngularVelocity;
     }
 
     public void turnRight() {
         if (hp < 1) return;
-        if (av < maxAngularVelocity) {
-            av += turnAcceleration;
-        } else {
-            av = maxAngularVelocity;
-        }
+        av += turnAcceleration;
+        if (av > maxAngularVelocity) av = maxAngularVelocity;
     }
 
     public void throttle() {
         if (hp < 1) return;
+        xv += (float)Math.sin(a) * acceleration;
+        yv += (float)Math.cos(a) * acceleration;
         float speed = (float)Math.sqrt(xv * xv + yv * yv);
-        if (speed < maxVelocity) {
-            xv += (float)Math.sin(a) * acceleration;
-            yv += (float)Math.cos(a) * acceleration;
-        } else {
+        if (speed > maxVelocity) {
             xv *= maxVelocity / speed;
             yv *= maxVelocity / speed;
         }
@@ -103,15 +98,15 @@ public class Ship extends Entity {
         } else {
             av -= Math.signum(av) * angularFriction;
         }
-        if (shieldTime > 0) shieldTime -= 0.016f;
+        if (shieldTime > 0) shieldTime -= 0.05f;
         return true;
     }
 
     @Override
-    public void draw(Batch batch) {
+    public void draw(Batch batch, float delta) {
         if (hp < 1) return;
         batch.setDefaults();
-        batch.setRotation(a);
+        batch.setRotation(a + av * delta);
         float s = rand();
         float dx = xv * (0.3f + s * 0.2f) * glowRadius / maxVelocity;
         float dy = yv * (0.3f + s * 0.2f) * glowRadius / maxVelocity;
@@ -122,7 +117,7 @@ public class Ship extends Entity {
                  && x + i * Game.WIDTH - size - glowRadius < Game.WIDTH / 2
                  && y + j * Game.HEIGHT + size + glowRadius > -Game.HEIGHT / 2
                  && y + j * Game.HEIGHT - size - glowRadius < Game.HEIGHT / 2) {
-                    batch.setOrigin(x + i * Game.WIDTH, y + j * Game.HEIGHT);
+                    batch.setOrigin(x + xv * delta + i * Game.WIDTH, y + yv * delta + j * Game.HEIGHT);
                     batch.setColor(teamColorR[team], teamColorG[team], teamColorB[team], 1);
                     batch.setLineParams(0.5f, 0, glowRadius, falloffMultiplier);
                     batch.setGlowShift(-dx, -dy);
@@ -142,7 +137,7 @@ public class Ship extends Entity {
         Game.addEntity(new Particle(
             x, y, a, -size * 0.5f, -maxVelocity,
             1, 0.5f, 0, 1,
-            2, 0.1f
+            1.2f, 0.12f
         ));
     }
 
@@ -152,9 +147,9 @@ public class Ship extends Entity {
                 x, y,
                 rand() * 2 * (float)Math.PI,
                 rand() * 10,
-                1.5f + rand() * 2,
+                4 + rand() * 4,
                 0, 1, 0.5f, 1,
-                1 + rand() * 0.3f, 0.02f
+                1.2f + rand() * 0.7f, 0.04f
             ));
         }
     }
@@ -165,41 +160,25 @@ public class Ship extends Entity {
                 x, y,
                 rand() * 2 * (float)Math.PI,
                 rand() * 10,
-                2 + rand() * 2,
+                5 + rand() * 5,
                 1, 0.2f + rand() * 0.3f, 0, 1,
-                1.2f + rand() * 0.3f, 0.015f
+                1.2f + rand() * 0.3f, 0.035f
             ));
         }
         Game.addEntity(new ShipPart(
-            x, y, a,
-            (float)Math.sin(a + Math.PI * 0.375) + xv * 0.1f,
-            (float)Math.cos(a + Math.PI * 0.375) + yv * 0.1f,
-            (rand() - 0.5f) * 0.02f,
-            team,
+            x, y, a, xv, yv, team,
             px[0], py[0], px[1], py[1]
         ));
         Game.addEntity(new ShipPart(
-            x, y, a,
-            (float)Math.sin(a - Math.PI * 0.375) + xv * 0.1f,
-            (float)Math.cos(a - Math.PI * 0.375) + yv * 0.1f,
-            (rand() - 0.5f) * 0.02f,
-            team,
+            x, y, a, xv, yv, team,
             px[0], py[0], px[3], py[3]
         ));
         Game.addEntity(new ShipPart(
-            x, y, a,
-            (float)Math.sin(a + Math.PI * 0.875) + xv * 0.1f,
-            (float)Math.cos(a + Math.PI * 0.875) + yv * 0.1f,
-            (rand() - 0.5f) * 0.02f,
-            team,
+            x, y, a, xv, yv, team,
             px[1], py[1], px[2], py[2]
         ));
         Game.addEntity(new ShipPart(
-            x, y, a,
-            (float)Math.sin(a - Math.PI * 0.875) + xv * 0.1f,
-            (float)Math.cos(a - Math.PI * 0.875) + yv * 0.1f,
-            (rand() - 0.5f) * 0.02f,
-            team,
+            x, y, a, xv, yv, team,
             px[2], py[2], px[3], py[3]
         ));
     }

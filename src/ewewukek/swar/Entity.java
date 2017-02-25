@@ -16,5 +16,5 @@ public abstract class Entity {
         return true;
     }
 
-    public abstract void draw(Batch batch);
+    public abstract void draw(Batch batch, float delta);
 }

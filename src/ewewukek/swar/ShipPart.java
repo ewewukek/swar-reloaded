@@ -11,40 +11,44 @@ public class ShipPart extends Entity {
     private float x2;
     private float y2;
 
-    public ShipPart(float x, float y, float a,
-                    float xv, float yv, float av,
-                    int team,
-                    float x1, float y1, float x2, float y2) {
-        x1 += x;
-        y1 += y;
-        x2 += x;
-        y2 += y;
-        this.x = (x1 + x2) * 0.5f;
-        this.y = (y1 + y2) * 0.5f;
-        this.a = a;
-        this.xv = xv;
-        this.yv = yv;
-        this.av = av;
+    public ShipPart(float shipX, float shipY, float shipA,
+                    float shipXV, float shipYV, int team,
+                    float px1, float py1, float px2, float py2) {
+        float s = (float)Math.sin(shipA);
+        float c = (float)Math.cos(shipA);
+        x1 = c * px1 + s * py1;
+        y1 = -s * px1 + c * py1;
+        x2 = c * px2 + s * py2;
+        y2 = -s * px2 + c * py2;
+        x = (x1 + x2) * 0.5f;
+        y = (y1 + y2) * 0.5f;
+        xv = x * 0.1f;
+        yv = y * 0.1f;
+        x1 -= x;
+        y1 -= y;
+        x2 -= x;
+        y2 -= y;
+        x += shipX;
+        y += shipY;
+        xv += shipXV * 0.1f;
+        yv += shipYV * 0.1f;
+        av = (rand() - 0.5f) * 0.1f;
         this.team = team;
-        this.x1 = x1 - this.x;
-        this.y1 = y1 - this.y;
-        this.x2 = x2 - this.x;
-        this.y2 = y2 - this.y;
         luminosity = 1.2f;
     }
 
     @Override
     public boolean update() {
         super.update();
-        luminosity -= 0.02f;
+        luminosity -= 0.05f;
         return luminosity > 0;
     }
 
     @Override
-    public void draw(Batch batch) {
+    public void draw(Batch batch, float delta) {
         batch.setDefaults();
-        batch.setOrigin(x, y);
-        batch.setRotation(a);
+        batch.setOrigin(x + xv * delta, y + yv * delta);
+        batch.setRotation(a + av * delta);
         float cm = Math.min(1, luminosity);
         batch.setColor(
             Ship.teamColorR[team] * cm,

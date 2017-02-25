@@ -21,6 +21,11 @@ public class Game {
     public static final int WIDTH = 1024;
     public static final int HEIGHT = 768;
 
+    public static final double timeStep = 0.05;
+
+    private double tickTime;
+    private long tick = 0;
+
     private final String title = "swar";
 
     private boolean[] keyPressed = new boolean[1024];
@@ -35,6 +40,10 @@ public class Game {
 
     public static void addEntity(Entity e) {
         newEntities.add(e);
+    }
+
+    private double getTime() {
+        return (double)Sys.getTime() / Sys.getTimerResolution();
     }
 
     private Game() {
@@ -72,6 +81,9 @@ public class Game {
 
         Ship ship = new Ship(0);
         ship.spawnAt(0, 0);
+        addEntity(ship);
+
+        tickTime = getTime();
 
         while (!Display.isCloseRequested()) {
             if (Display.wasResized()) resize();
@@ -90,9 +102,8 @@ public class Game {
                 batch.addPoint(starX[i], starY[i]);
             }
 
-            ship.draw(batch);
-
-            drawEntities(batch);
+            double delta = (getTime() - tickTime) / timeStep;
+            drawEntities(batch, (float)delta);
 
             batch.draw();
 
@@ -128,7 +139,7 @@ public class Game {
                             ship.kill();
                         break;
                         case Keyboard.KEY_SPACE:
-                            ship.spawnAt(rand() * WIDTH / 2, rand() * HEIGHT / 2);
+                            ship.spawnAt((rand() - 0.5f) * WIDTH, (rand() - 0.5f) * HEIGHT);
                         break;
                     }
                 } else {
@@ -145,20 +156,24 @@ public class Game {
                 ship.turnRight();
             }
 
-            ship.update();
-            updateEntities();
             entities.addAll(newEntities);
             newEntities.clear();
+
+            while (tickTime + timeStep < getTime()) {
+                tickTime += timeStep;
+                tick++;
+                updateEntities();
+            }
         }
         Display.destroy();
         System.exit(0);
     }
 
-    private static void drawEntities(Batch batch) {
+    private static void drawEntities(Batch batch, float delta) {
         Iterator<Entity> it = entities.iterator();
         while (it.hasNext()) {
             Entity e = (Entity)it.next();
-            e.draw(batch);
+            e.draw(batch, delta);
         }
     }
 

@@ -29,16 +29,16 @@ public class Particle extends Entity {
     @Override
     public boolean update() {
         super.update();
-        xv *= 0.95f;
-        yv *= 0.95f;
+        xv *= 0.86f;
+        yv *= 0.86f;
         luminosity -= luminosityModifier;
         return luminosity > 0;
     }
 
     @Override
-    public void draw(Batch batch) {
+    public void draw(Batch batch, float delta) {
         batch.setDefaults();
-        batch.setOrigin(x, y);
+        batch.setOrigin(x + xv * delta, y + yv * delta);
         batch.setGlowShift(-xv, -yv);
         float cr = Math.min(colorR * luminosity, 1);
         float cg = Math.min(colorG * luminosity, 1);
