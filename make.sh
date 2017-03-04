@@ -13,7 +13,7 @@ clean-all)
     rm -rf bin jar native
     ;;
 run)
-    java -cp jar/lwjgl.jar:jar/joml.jar:bin -Djava.library.path=native ewewukek/swar/Game
+    java -cp jar/lwjgl.jar:jar/joml.jar:bin -Djava.library.path=native ewewukek/swar/Main
     ;;
 build)
     if [ ! -f jar/lwjgl.jar ]; then

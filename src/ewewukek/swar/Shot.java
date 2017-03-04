@@ -50,7 +50,7 @@ public class Shot extends Entity {
         for (int i = 0; i != 20; ++i) {
             float a = rand() * 2 * (float)Math.PI;
             float r = 1 + rand() * 9;
-            Game.addEntity(new Particle(
+            Game.addLocalEntity(new Particle(
                 x, y, a, r, 5,
                 Ship.teamColorR[team],
                 Ship.teamColorG[team],

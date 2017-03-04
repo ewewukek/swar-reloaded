@@ -6,8 +6,17 @@ import org.joml.Vector2f;
 
 public class Util {
     private static final Random random = new Random();
+    private static long startNanoSecs = System.nanoTime();
 
     public static float rand() { return random.nextFloat(); }
+
+    public static void resetTime() {
+        startNanoSecs = System.nanoTime();
+    }
+
+    public static float time() {
+        return (System.nanoTime() - startNanoSecs) / 1000000000f;
+    }
 
     public static Vector2f intersect(float l1x, float l1y, float l2x, float l2y) {
         float d = l1x*l2y - l2x*l1y;

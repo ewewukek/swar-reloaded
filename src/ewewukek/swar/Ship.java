@@ -9,23 +9,34 @@ public class Ship extends Entity {
     public static final float glowRadius = 25;
     public static final float falloffMultiplier = 6.5f;
 
-    public static final float acceleration = 1;
-    public static final float maxVelocity = 10;
-    public static final float friction = 0.4f;
-    public static final float turnAcceleration = (float)Math.toRadians(3);
-    public static final float maxAngularVelocity = (float)Math.toRadians(15);
-    public static final float angularFriction = (float)Math.toRadians(3);
+    public static final float acceleration = 6;
+    public static final float maxVelocity = 12;
+    public static final float friction = 1.2f;
+    public static final float turnAcceleration = (float)Math.toRadians(10);
+    public static final float maxAngularVelocity = (float)Math.toRadians(21);
+    public static final float angularFriction = (float)Math.toRadians(5);
+
+    public static final int startHp = 2;
+    public static final float shotDelay = 0.7f;
+    public static final float startShieldTime = 1.5f;
 
     public static final int teamCount = 4;
     public static final float[] teamColorR = new float[] {     1, 0.5f, 0.1f, 0.7f };
     public static final float[] teamColorG = new float[] { 0.35f, 0.5f, 0.7f, 0.7f };
     public static final float[] teamColorB = new float[] { 0.35f,    1, 0.1f,    0 };
 
+    public boolean keyLeft;
+    public boolean keyRight;
+    public boolean keyThrottle;
+    public boolean keyFire;
+
     private int hp;
     private int team;
     private float shieldTime;
+    private float shotTime;
 
     public Ship(int team) {
+        this.hp = startHp;
         this.team = team;
     }
 
@@ -38,38 +49,9 @@ public class Ship extends Entity {
         this.y = y;
         this.xv = 0;
         this.yv = 0;
-        this.shieldTime = 1.5f;
+        this.shieldTime = startShieldTime;
         this.hp = 2;
         effectSpawn();
-    }
-
-    public void turnLeft() {
-        if (hp < 1) return;
-        av -= turnAcceleration;
-        if (av < -maxAngularVelocity) av = -maxAngularVelocity;
-    }
-
-    public void turnRight() {
-        if (hp < 1) return;
-        av += turnAcceleration;
-        if (av > maxAngularVelocity) av = maxAngularVelocity;
-    }
-
-    public void throttle() {
-        if (hp < 1) return;
-        xv += (float)Math.sin(a) * acceleration;
-        yv += (float)Math.cos(a) * acceleration;
-        float speed = (float)Math.sqrt(xv * xv + yv * yv);
-        if (speed > maxVelocity) {
-            xv *= maxVelocity / speed;
-            yv *= maxVelocity / speed;
-        }
-        effectExhaust();
-    }
-
-    public void shoot() {
-        if (hp < 1) return;
-        Game.addEntity(new Shot(team, x, y, a, size));
     }
 
     public void kill() {
@@ -81,6 +63,29 @@ public class Ship extends Entity {
     public boolean update() {
         if (hp < 1) return true;
         super.update();
+        if (keyLeft) {
+            av -= turnAcceleration;
+            if (av < -maxAngularVelocity) av = -maxAngularVelocity;
+        }
+        if (keyRight) {
+            av += turnAcceleration;
+            if (av > maxAngularVelocity) av = maxAngularVelocity;
+        }
+        if (keyThrottle) {
+            xv += (float)Math.sin(a) * acceleration;
+            yv += (float)Math.cos(a) * acceleration;
+            float speed = (float)Math.sqrt(xv * xv + yv * yv);
+            if (speed > maxVelocity) {
+                xv *= maxVelocity / speed;
+                yv *= maxVelocity / speed;
+            }
+        }
+        if (keyFire) {
+            if (shotTime < time()) {
+                Game.addEntity(new Shot(team, x, y, a, size));
+                shotTime = time() + shotDelay;
+            }
+        }
         if (x < -Game.WIDTH / 2) x += Game.WIDTH;
         if (x >= Game.WIDTH / 2) x -= Game.WIDTH;
         if (y < -Game.HEIGHT / 2) y += Game.HEIGHT;
@@ -105,6 +110,7 @@ public class Ship extends Entity {
     @Override
     public void draw(Batch batch, float delta) {
         if (hp < 1) return;
+        if (keyThrottle) effectExhaust(delta);
         batch.setDefaults();
         batch.setRotation(a + av * delta);
         float s = rand();
@@ -133,17 +139,17 @@ public class Ship extends Entity {
         }
     }
 
-    private void effectExhaust() {
-        Game.addEntity(new Particle(
-            x, y, a, -size * 0.5f, -maxVelocity,
+    private void effectExhaust(float delta) {
+        Game.addLocalEntity(new Particle(
+            x + xv * delta, y + yv * delta, a + av * delta, -size * 0.6f, -4,
             1, 0.5f, 0, 1,
-            1.2f, 0.12f
+            1.5f + rand() * 0.3f, 0.15f
         ));
     }
 
     private void effectSpawn() {
         for (int i = 0; i != 25; ++i) {
-            Game.addEntity(new Particle(
+            Game.addLocalEntity(new Particle(
                 x, y,
                 rand() * 2 * (float)Math.PI,
                 rand() * 10,
@@ -156,7 +162,7 @@ public class Ship extends Entity {
 
     private void effectExplosion() {
         for (int i = 0; i != 50; ++i) {
-            Game.addEntity(new Particle(
+            Game.addLocalEntity(new Particle(
                 x, y,
                 rand() * 2 * (float)Math.PI,
                 rand() * 10,
@@ -165,19 +171,19 @@ public class Ship extends Entity {
                 1.2f + rand() * 0.3f, 0.035f
             ));
         }
-        Game.addEntity(new ShipPart(
+        Game.addLocalEntity(new ShipPart(
             x, y, a, xv, yv, team,
             px[0], py[0], px[1], py[1]
         ));
-        Game.addEntity(new ShipPart(
+        Game.addLocalEntity(new ShipPart(
             x, y, a, xv, yv, team,
             px[0], py[0], px[3], py[3]
         ));
-        Game.addEntity(new ShipPart(
+        Game.addLocalEntity(new ShipPart(
             x, y, a, xv, yv, team,
             px[1], py[1], px[2], py[2]
         ));
-        Game.addEntity(new ShipPart(
+        Game.addLocalEntity(new ShipPart(
             x, y, a, xv, yv, team,
             px[2], py[2], px[3], py[3]
         ));

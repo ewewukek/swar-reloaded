@@ -40,11 +40,16 @@ public class Particle extends Entity {
         batch.setDefaults();
         batch.setOrigin(x + xv * delta, y + yv * delta);
         batch.setGlowShift(-xv, -yv);
-        float cr = Math.min(colorR * luminosity, 1);
-        float cg = Math.min(colorG * luminosity, 1);
-        float cb = Math.min(colorB * luminosity, 1);
+        float l = luminosity - luminosityModifier * delta;
+        float cr = Math.min(colorR * l, 1);
+        float cg = Math.min(colorG * l, 1);
+        float cb = Math.min(colorB * l, 1);
         float ca = colorA;
         batch.setColor(cr, cg, cb, ca);
-        batch.addLine(0, 0, -xv, -yv);
+        if (xv == 0 && yv == 0) {
+            batch.addPoint(0, 0);
+        } else {
+            batch.addLine(0, 0, -xv, -yv);
+        }
     }
 }
