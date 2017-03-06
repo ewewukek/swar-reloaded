@@ -9,21 +9,26 @@ public class Ship extends Entity {
     public static final float glowRadius = 25;
     public static final float falloffMultiplier = 6.5f;
 
-    public static final float acceleration = 6;
+    public static final float acceleration = 5;
     public static final float maxVelocity = 12;
     public static final float friction = 1.2f;
-    public static final float turnAcceleration = (float)Math.toRadians(10);
-    public static final float maxAngularVelocity = (float)Math.toRadians(21);
-    public static final float angularFriction = (float)Math.toRadians(5);
+    public static final float turnAcceleration = (float)Math.toRadians(18);
+    public static final float maxAngularVelocity = (float)Math.toRadians(18);
+    public static final float turnDeceleration = (float)Math.toRadians(6);
 
     public static final int startHp = 2;
     public static final float shotDelay = 0.7f;
     public static final float startShieldTime = 1.5f;
+    public static final float respawnDelay = 2;
 
     public static final int teamCount = 4;
     public static final float[] teamColorR = new float[] {     1, 0.5f, 0.1f, 0.7f };
     public static final float[] teamColorG = new float[] { 0.35f, 0.5f, 0.7f, 0.7f };
     public static final float[] teamColorB = new float[] { 0.35f,    1, 0.1f,    0 };
+
+    public int team;
+
+    public AI ai;
 
     public boolean keyLeft;
     public boolean keyRight;
@@ -31,22 +36,14 @@ public class Ship extends Entity {
     public boolean keyFire;
 
     private int hp;
-    private int team;
     private float shieldTime;
     private float shotTime;
 
-    public Ship(int team) {
-        this.hp = startHp;
-        this.team = team;
-    }
+    private float respawnTime;
 
-    public void setTeam(int team) {
-        this.team = team;
-    }
+    public Ship() {}
 
-    public void spawnAt(float x, float y) {
-        this.x = x;
-        this.y = y;
+    public void spawn() {
         this.xv = 0;
         this.yv = 0;
         this.shieldTime = startShieldTime;
@@ -54,22 +51,50 @@ public class Ship extends Entity {
         effectSpawn();
     }
 
-    public void kill() {
-        hp = 0;
-        effectExplosion();
+    public boolean alive() {
+        return hp > 0;
+    }
+
+    public void hit() {
+        if (shieldTime > 0) return;
+        if (hp < 1) return;
+        hp--;
+        if (hp < 1) {
+            effectExplosion();
+            x = (rand() - 0.5f) * Game.WIDTH;
+            y = (rand() - 0.5f) * Game.HEIGHT;
+            a = rand() * 2 * (float)Math.PI;
+            xv = 0;
+            yv = 0;
+            av = 0;
+            respawnTime = time() + respawnDelay;
+        }
+    }
+
+    public boolean isShieldActive() {
+        return shieldTime > 0;
     }
 
     @Override
     public boolean update() {
-        if (hp < 1) return true;
+        if (hp < 1) {
+            if (respawnTime != 0 && respawnTime < time()) spawn();
+            return true;
+        }
         super.update();
-        if (keyLeft) {
+        if (ai != null) ai.update(this);
+        if (keyLeft && !keyRight) {
             av -= turnAcceleration;
             if (av < -maxAngularVelocity) av = -maxAngularVelocity;
-        }
-        if (keyRight) {
+        } else if (keyRight && !keyLeft) {
             av += turnAcceleration;
             if (av > maxAngularVelocity) av = maxAngularVelocity;
+        } else {
+            if (Math.abs(av) < turnDeceleration) {
+                av = 0;
+            } else {
+                av -= Math.signum(av) * turnDeceleration;
+            }
         }
         if (keyThrottle) {
             xv += (float)Math.sin(a) * acceleration;
@@ -82,7 +107,7 @@ public class Ship extends Entity {
         }
         if (keyFire) {
             if (shotTime < time()) {
-                Game.addEntity(new Shot(team, x, y, a, size));
+                Game.addShot(new Shot(team, x, y, a, size));
                 shotTime = time() + shotDelay;
             }
         }
@@ -98,25 +123,21 @@ public class Ship extends Entity {
             xv *= (speed - friction) / speed;
             yv *= (speed - friction) / speed;
         }
-        if (Math.abs(av) < angularFriction) {
-            av = 0;
-        } else {
-            av -= Math.signum(av) * angularFriction;
-        }
         if (shieldTime > 0) shieldTime -= 0.05f;
         return true;
     }
 
     @Override
     public void draw(Batch batch, float delta) {
-        if (hp < 1) return;
-        if (keyThrottle) effectExhaust(delta);
+        if (hp < 1 && !Game.isPlayerShip(this)) return;
+        if (hp > 0 && keyThrottle) effectExhaust(delta);
         batch.setDefaults();
         batch.setRotation(a + av * delta);
         float s = rand();
         float dx = xv * (0.3f + s * 0.2f) * glowRadius / maxVelocity;
         float dy = yv * (0.3f + s * 0.2f) * glowRadius / maxVelocity;
-        float cm = Math.min(1, 0.5f + 2 * shieldTime);
+        float shieldLuminance = Math.min(1, 0.5f + 2 * (shieldTime - 0.05f * delta));
+        float cm = (hp > 0) ? 1 : 0.3f;
         for (int i = -1; i != 2; ++i) {
             for (int j = -1; j != 2; ++j) {
                 if (x + i * Game.WIDTH + size + glowRadius > -Game.WIDTH / 2
@@ -124,12 +145,12 @@ public class Ship extends Entity {
                  && y + j * Game.HEIGHT + size + glowRadius > -Game.HEIGHT / 2
                  && y + j * Game.HEIGHT - size - glowRadius < Game.HEIGHT / 2) {
                     batch.setOrigin(x + xv * delta + i * Game.WIDTH, y + yv * delta + j * Game.HEIGHT);
-                    batch.setColor(teamColorR[team], teamColorG[team], teamColorB[team], 1);
+                    batch.setColor(cm * teamColorR[team], cm * teamColorG[team], cm * teamColorB[team], 1);
                     batch.setLineParams(0.5f, 0, glowRadius, falloffMultiplier);
                     batch.setGlowShift(-dx, -dy);
                     batch.addArrays(px, py, lx, ly, tris, gs);
-                    if (shieldTime > 0) {
-                        batch.setColor(0, cm * 1, cm * 0.8f, 1);
+                    if (hp > 0 && shieldTime > 0) {
+                        batch.setColor(0, shieldLuminance, shieldLuminance * 0.8f, 1);
                         batch.setLineParams(0.5f, size + 10, 10, falloffMultiplier);
                         batch.setGlowShift(0, 0);
                         batch.addPoint(0, 0);

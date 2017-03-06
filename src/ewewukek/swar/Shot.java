@@ -6,7 +6,9 @@ public class Shot extends Entity {
     public static final float speed = 20f;
     public static final float length = 15f;
 
-    private int team;
+    public int team;
+
+    private boolean alive = true;
 
     public Shot(int team, float shipX, float shipY, float shipA, float dist) {
         this.team = team;
@@ -20,14 +22,15 @@ public class Shot extends Entity {
         av = 0;
     }
 
+    public void hit(boolean hitShield) {
+        effectExplosion(hitShield);
+        alive = false;
+    }
+
     @Override
     public boolean update() {
         super.update();
-        if (x > 0) {
-            effectExplosion();
-            return false;
-        }
-        return x > -Game.WIDTH / 2 && x < Game.WIDTH / 2
+        return alive && x > -Game.WIDTH / 2 && x < Game.WIDTH / 2
             && y > -Game.HEIGHT / 2 && y < Game.HEIGHT / 2;
     }
 
@@ -46,15 +49,15 @@ public class Shot extends Entity {
         batch.addLine(0, 0, 0, -length);
     }
 
-    public void effectExplosion() {
+    public void effectExplosion(boolean hitShield) {
         for (int i = 0; i != 20; ++i) {
             float a = rand() * 2 * (float)Math.PI;
             float r = 1 + rand() * 9;
             Game.addLocalEntity(new Particle(
                 x, y, a, r, 5,
-                Ship.teamColorR[team],
-                Ship.teamColorG[team],
-                Ship.teamColorB[team],
+                hitShield ? 0.0f : Ship.teamColorR[team],
+                hitShield ? 1.0f : Ship.teamColorG[team],
+                hitShield ? 0.8f : Ship.teamColorB[team],
                 1,
                 1.5f, 0.2f
             ));

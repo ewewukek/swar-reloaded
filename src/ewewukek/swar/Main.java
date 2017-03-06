@@ -53,11 +53,14 @@ public class Main {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
 
-        Ship ship = new Ship(0);
-        Game.addEntity(ship);
-        Game.update();
-
         float tickTime = time();
+
+        Ship someShip = new Ship();
+        someShip.team = 1;
+        someShip.ai = new AISimple();
+        someShip.x = Game.WIDTH * 0.25f;
+        someShip.spawn();
+        Game.addShip(someShip);
 
         while (!Display.isCloseRequested()) {
             if (Display.wasResized()) resize();
@@ -94,22 +97,16 @@ public class Main {
                             System.exit(0);
                         break;
                         case Keyboard.KEY_1:
-                            ship.setTeam(0);
+                            Game.setPlayerTeam(0);
                         break;
                         case Keyboard.KEY_2:
-                            ship.setTeam(1);
+                            Game.setPlayerTeam(1);
                         break;
                         case Keyboard.KEY_3:
-                            ship.setTeam(2);
+                            Game.setPlayerTeam(2);
                         break;
                         case Keyboard.KEY_4:
-                            ship.setTeam(3);
-                        break;
-                        case Keyboard.KEY_K:
-                            ship.kill();
-                        break;
-                        case Keyboard.KEY_SPACE:
-                            ship.spawnAt((rand() - 0.5f) * Game.WIDTH, (rand() - 0.5f) * Game.HEIGHT);
+                            Game.setPlayerTeam(3);
                         break;
                     }
                 } else {
@@ -117,10 +114,12 @@ public class Main {
                 }
             }
 
-            ship.keyLeft = keyPressed[Keyboard.KEY_LEFT];
-            ship.keyRight = keyPressed[Keyboard.KEY_RIGHT];
-            ship.keyThrottle = keyPressed[Keyboard.KEY_UP];
-            ship.keyFire = keyPressed[Keyboard.KEY_LCONTROL] || keyPressed[Keyboard.KEY_RCONTROL];
+            Game.setPlayerKeys(
+                keyPressed[Keyboard.KEY_LEFT],
+                keyPressed[Keyboard.KEY_RIGHT],
+                keyPressed[Keyboard.KEY_UP],
+                keyPressed[Keyboard.KEY_LCONTROL] || keyPressed[Keyboard.KEY_RCONTROL]
+            );
 
             while (tickTime + Game.TIME_STEP < time()) {
                 tickTime += Game.TIME_STEP;

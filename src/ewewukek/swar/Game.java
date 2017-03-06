@@ -15,15 +15,44 @@ public class Game {
     private long tick = 0;
 
     private static List<Entity> localEntities = new ArrayList<Entity>();
-    private static List<Entity> entities = new ArrayList<Entity>();
-    private static List<Entity> newEntities = new ArrayList<Entity>();
+    public static List<Entity> ships = new ArrayList<Entity>();
+    public static List<Entity> shots = new ArrayList<Entity>();
 
-    public static void addEntity(Entity e) {
-        newEntities.add(e);
+    private static Ship playerShip;
+
+    public static void addShip(Ship ship) {
+        ships.add(ship);
+    }
+
+    public static void addShot(Shot shot) {
+        shots.add(shot);
     }
 
     public static void addLocalEntity(Entity e) {
         localEntities.add(e);
+    }
+
+    public static boolean isPlayerShip(Ship ship) {
+        return ship == playerShip;
+    }
+
+    public static void setPlayerTeam(int team) {
+        if (playerShip == null) {
+            playerShip = new Ship();
+            addShip(playerShip);
+        }
+        playerShip.team = team;
+        playerShip.x = (rand() - 0.5f) * WIDTH;
+        playerShip.y = (rand() - 0.5f) * HEIGHT;
+        playerShip.spawn();
+    }
+
+    public static void setPlayerKeys(boolean left, boolean right, boolean throttle, boolean fire) {
+        if (playerShip == null) return;
+        playerShip.keyLeft = left;
+        playerShip.keyRight = right;
+        playerShip.keyThrottle = throttle;
+        playerShip.keyFire = fire;
     }
 
     private static void drawList(List<Entity> list, Batch batch, float delta) {
@@ -34,9 +63,23 @@ public class Game {
         }
     }
 
+    private static final float[] markerX = new float[] { 0, -5,  5 };
+    private static final float[] markerY = new float[] { 0,  5,  5 };
+    private static final float[] markerL = new float[] { 0, 0, 0 };
+    private static final int[] markerTris = new int[] { 0, 1, 2 };
+
     public static void draw(Batch batch, float delta) {
-        drawList(entities, batch, delta);
+        drawList(ships, batch, delta);
+        drawList(shots, batch, delta);
         drawList(localEntities, batch, delta);
+        if (playerShip != null) {
+            batch.setDefaults();
+            batch.setOrigin(
+                playerShip.x + playerShip.xv * delta,
+                playerShip.y + Ship.size + 7.5 + playerShip.yv * delta
+            );
+            batch.addArrays(markerX, markerY, markerL, markerL, markerTris, markerL);
+        }
     }
 
     private static void updateList(List<Entity> list) {
@@ -50,9 +93,22 @@ public class Game {
     }
 
     public static void update() {
-        entities.addAll(newEntities);
-        newEntities.clear();
-        updateList(entities);
+        updateList(ships);
+        updateList(shots);
         updateList(localEntities);
+
+        Iterator<Entity> shotIt = shots.iterator();
+        while (shotIt.hasNext()) {
+            Shot shot = (Shot)shotIt.next();
+            Iterator<Entity> shipIt = ships.iterator();
+            while (shipIt.hasNext()) {
+                Ship ship = (Ship)shipIt.next();
+                if (ship.team == shot.team || !ship.alive()) continue;
+                if (dist(ship.x, ship.y, shot.x, shot.y) < Ship.size) {
+                    ship.hit();
+                    shot.hit(ship.isShieldActive());
+                }
+            }
+        }
     }
 }
