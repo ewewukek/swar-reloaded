@@ -63,8 +63,8 @@ public class Game {
         }
     }
 
-    private static final float[] markerX = new float[] { 0, -5,  5 };
-    private static final float[] markerY = new float[] { 0,  5,  5 };
+    private static final float[] markerX = new float[] { 0, -7.5f,  7.5f };
+    private static final float[] markerY = new float[] { 0,  7.5f,  7.5f };
     private static final float[] markerL = new float[] { 0, 0, 0 };
     private static final int[] markerTris = new int[] { 0, 1, 2 };
 
@@ -76,7 +76,7 @@ public class Game {
             batch.setDefaults();
             batch.setOrigin(
                 playerShip.x + playerShip.xv * delta,
-                playerShip.y + Ship.size + 7.5 + playerShip.yv * delta
+                playerShip.y + Ship.size + 5f + playerShip.yv * delta
             );
             batch.addArrays(markerX, markerY, markerL, markerL, markerTris, markerL);
         }
