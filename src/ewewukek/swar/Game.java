@@ -47,10 +47,9 @@ public class Game {
         playerShip.spawn();
     }
 
-    public static void setPlayerKeys(boolean left, boolean right, boolean throttle, boolean fire) {
+    public static void setPlayerInput(float turn, boolean throttle, boolean fire) {
         if (playerShip == null) return;
-        playerShip.keyLeft = left;
-        playerShip.keyRight = right;
+        playerShip.inputTurn = turn;
         playerShip.keyThrottle = throttle;
         playerShip.keyFire = fire;
     }
@@ -107,6 +106,7 @@ public class Game {
                 if (dist(ship.x, ship.y, shot.x, shot.y) < Ship.size) {
                     ship.hit();
                     shot.hit(ship.isShieldActive());
+                    break;
                 }
             }
         }

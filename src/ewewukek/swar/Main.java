@@ -26,7 +26,7 @@ public class Main {
         for (int i = 0; i != starCount; ++i) {
             starX[i] = (rand() - 0.5f) * Game.WIDTH;
             starY[i] = (rand() - 0.5f) * Game.HEIGHT;
-            starLuminosity[i] = 0.125f + rand() * 0.875f;
+            starLuminosity[i] = 0.25f + rand() * 0.75f;
         }
 
         Display.setTitle(title);
@@ -56,11 +56,14 @@ public class Main {
         float tickTime = time();
 
         Ship someShip = new Ship();
+        someShip.x = (rand() - 0.5f) * Game.WIDTH;
+        someShip.y = (rand() - 0.5f) * Game.HEIGHT;
         someShip.team = 1;
         someShip.ai = new AISimple();
-        someShip.x = Game.WIDTH * 0.25f;
         someShip.spawn();
         Game.addShip(someShip);
+
+        float inputTurn = 0;
 
         while (!Display.isCloseRequested()) {
             if (Display.wasResized()) resize();
@@ -114,14 +117,21 @@ public class Main {
                 }
             }
 
-            Game.setPlayerKeys(
-                keyPressed[Keyboard.KEY_LEFT],
-                keyPressed[Keyboard.KEY_RIGHT],
-                keyPressed[Keyboard.KEY_UP],
-                keyPressed[Keyboard.KEY_LCONTROL] || keyPressed[Keyboard.KEY_RCONTROL]
-            );
+            if (keyPressed[Keyboard.KEY_LEFT]) {
+                inputTurn = Math.max(-1, inputTurn - 0.33f);
+            } else if (keyPressed[Keyboard.KEY_RIGHT]) {
+                inputTurn = Math.min(1, inputTurn + 0.33f);
+            } else {
+                inputTurn = 0;
+            }
 
             while (tickTime + Game.TIME_STEP < time()) {
+                Game.setPlayerInput(
+                    inputTurn,
+                    keyPressed[Keyboard.KEY_UP],
+                    keyPressed[Keyboard.KEY_LCONTROL] || keyPressed[Keyboard.KEY_RCONTROL]
+                );
+
                 tickTime += Game.TIME_STEP;
                 Game.update();
             }

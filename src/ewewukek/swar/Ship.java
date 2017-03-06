@@ -14,7 +14,8 @@ public class Ship extends Entity {
     public static final float friction = 1.2f;
     public static final float turnAcceleration = (float)Math.toRadians(18);
     public static final float maxAngularVelocity = (float)Math.toRadians(18);
-    public static final float turnDeceleration = (float)Math.toRadians(6);
+    public static final float minAngularVelocity = (float)Math.toRadians(1);
+    public static final float angularFriction = 0.5f;
 
     public static final int startHp = 2;
     public static final float shotDelay = 0.7f;
@@ -22,16 +23,15 @@ public class Ship extends Entity {
     public static final float respawnDelay = 2;
 
     public static final int teamCount = 4;
-    public static final float[] teamColorR = new float[] {     1, 0.5f, 0.1f, 0.7f };
-    public static final float[] teamColorG = new float[] { 0.35f, 0.5f, 0.7f, 0.7f };
-    public static final float[] teamColorB = new float[] { 0.35f,    1, 0.1f,    0 };
+    public static final float[] teamColorR = new float[] {     1, 0.5f,  0.1f, 0.85f };
+    public static final float[] teamColorG = new float[] { 0.35f, 0.5f, 0.75f, 0.85f };
+    public static final float[] teamColorB = new float[] { 0.35f,    1,  0.1f,     0 };
 
     public int team;
 
     public AI ai;
 
-    public boolean keyLeft;
-    public boolean keyRight;
+    public float inputTurn;
     public boolean keyThrottle;
     public boolean keyFire;
 
@@ -83,19 +83,13 @@ public class Ship extends Entity {
         }
         super.update();
         if (ai != null) ai.update(this);
-        if (keyLeft && !keyRight) {
-            av -= turnAcceleration;
-            if (av < -maxAngularVelocity) av = -maxAngularVelocity;
-        } else if (keyRight && !keyLeft) {
-            av += turnAcceleration;
-            if (av > maxAngularVelocity) av = maxAngularVelocity;
+        if (Math.abs(av) < minAngularVelocity) {
+            av = 0;
         } else {
-            if (Math.abs(av) < turnDeceleration) {
-                av = 0;
-            } else {
-                av -= Math.signum(av) * turnDeceleration;
-            }
+            av *= angularFriction;
         }
+        av += Math.max(-1, Math.min(1, inputTurn)) * turnAcceleration;
+        av = Math.max(-maxAngularVelocity, Math.min(maxAngularVelocity, av));
         if (keyThrottle) {
             xv += (float)Math.sin(a) * acceleration;
             yv += (float)Math.cos(a) * acceleration;
@@ -137,7 +131,12 @@ public class Ship extends Entity {
         float dx = xv * (0.3f + s * 0.2f) * glowRadius / maxVelocity;
         float dy = yv * (0.3f + s * 0.2f) * glowRadius / maxVelocity;
         float shieldLuminance = Math.min(1, 0.5f + 2 * (shieldTime - 0.05f * delta));
-        float cm = (hp > 0) ? 1 : 0.3f;
+        float cm = 1;
+        if (hp < 1) {
+            cm = (respawnTime - time()) * 1.5f;
+            cm = cm - (int)cm;
+            cm = Math.abs(cm - 0.5f) + 0.25f;
+        }
         for (int i = -1; i != 2; ++i) {
             for (int j = -1; j != 2; ++j) {
                 if (x + i * Game.WIDTH + size + glowRadius > -Game.WIDTH / 2
