@@ -10,7 +10,7 @@ public class AISimple extends AI {
         self.inputTurn = 0;
         self.keyThrottle = false;
         self.keyFire = false;
-        if (enemy != null && !enemy.alive()) enemy = null;
+        if (enemy != null && (!enemy.alive() || enemy.team == self.team)) enemy = null;
         if (enemy == null) enemy = findEnemy(self);
         if (enemy == null) return;
         float lineFront = lineFunc(enemy.x, enemy.y, self.x, self.y, self.a + 0.5f * (float)Math.PI);

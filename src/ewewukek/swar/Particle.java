@@ -1,6 +1,7 @@
 package ewewukek.swar;
 
 public class Particle extends Entity {
+    public static final float frictionMultiplier = 0.86f;
     protected float luminosity;
     protected float luminosityModifier;
 
@@ -29,8 +30,8 @@ public class Particle extends Entity {
     @Override
     public boolean update() {
         super.update();
-        xv *= 0.86f;
-        yv *= 0.86f;
+        xv *= frictionMultiplier;
+        yv *= frictionMultiplier;
         luminosity -= luminosityModifier;
         return luminosity > 0;
     }

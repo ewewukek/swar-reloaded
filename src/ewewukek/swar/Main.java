@@ -11,6 +11,8 @@ import org.lwjgl.opengl.PixelFormat;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL20.*;
 
+import java.net.InetAddress;
+
 import static ewewukek.swar.Util.*;
 
 public class Main {
@@ -22,7 +24,7 @@ public class Main {
     private static float[] starY = new float[starCount];
     private static float[] starLuminosity = new float[starCount];
 
-    private static void start() throws LWJGLException {
+    private static void start() throws Exception {
         for (int i = 0; i != starCount; ++i) {
             starX[i] = (rand() - 0.5f) * Game.WIDTH;
             starY[i] = (rand() - 0.5f) * Game.HEIGHT;
@@ -54,14 +56,6 @@ public class Main {
         glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
 
         float tickTime = time();
-
-        Ship someShip = new Ship();
-        someShip.x = (rand() - 0.5f) * Game.WIDTH;
-        someShip.y = (rand() - 0.5f) * Game.HEIGHT;
-        someShip.team = 1;
-        someShip.ai = new AISimple();
-        someShip.spawn();
-        Game.addShip(someShip);
 
         float inputTurn = 0;
 
@@ -111,6 +105,24 @@ public class Main {
                         case Keyboard.KEY_4:
                             Game.setPlayerTeam(3);
                         break;
+                        case Keyboard.KEY_Q:
+                            Game.addBot(0);
+                        break;
+                        case Keyboard.KEY_W:
+                            Game.addBot(1);
+                        break;
+                        case Keyboard.KEY_E:
+                            Game.addBot(2);
+                        break;
+                        case Keyboard.KEY_R:
+                            Game.addBot(3);
+                        break;
+                        case Keyboard.KEY_F1:
+                            // Game.startServer(InetAddress.getByName("0.0.0.0"), 13337);
+                        break;
+                        case Keyboard.KEY_F2:
+                            // Game.startClient(InetAddress.getByName("127.0.0.1"), 13337);
+                        break;
                     }
                 } else {
                     keyPressed[code] = false;
@@ -155,7 +167,7 @@ public class Main {
             start();
             Display.destroy();
             System.exit(0);
-        } catch(LWJGLException e) {
+        } catch(Exception e) {
             e.printStackTrace();
         }
     }

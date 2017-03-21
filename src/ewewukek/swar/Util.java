@@ -7,15 +7,21 @@ import org.joml.Vector2f;
 public class Util {
     private static final Random random = new Random();
     private static long startNanoSecs = System.nanoTime();
+    private static float timeOffset;
 
     public static float rand() { return random.nextFloat(); }
 
     public static void resetTime() {
         startNanoSecs = System.nanoTime();
+        timeOffset = 0;
+    }
+
+    public static void setTime(float newTime) {
+        timeOffset += newTime - time();
     }
 
     public static float time() {
-        return (System.nanoTime() - startNanoSecs) / 1000000000f;
+        return timeOffset + (System.nanoTime() - startNanoSecs) / 1000000000f;
     }
 
     public static float dist(float x1, float y1, float x2, float y2) {

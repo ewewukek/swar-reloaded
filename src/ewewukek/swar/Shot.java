@@ -6,11 +6,17 @@ public class Shot extends Entity {
     public static final float speed = 20f;
     public static final float length = 15f;
 
+    private static int nextId = 1;
+
+    public int id;
+
     public int team;
 
     private boolean alive = true;
 
     public Shot(int team, float shipX, float shipY, float shipA, float dist) {
+        id = nextId;
+        ++nextId;
         this.team = team;
         float s = (float)Math.sin(shipA);
         float c = (float)Math.cos(shipA);

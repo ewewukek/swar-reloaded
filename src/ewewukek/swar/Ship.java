@@ -27,6 +27,10 @@ public class Ship extends Entity {
     public static final float[] teamColorG = new float[] { 0.35f, 0.5f, 0.75f, 0.85f };
     public static final float[] teamColorB = new float[] { 0.35f,    1,  0.1f,     0 };
 
+    private static int nextId = 1;
+
+    public int id;
+
     public int team;
 
     public AI ai;
@@ -41,13 +45,21 @@ public class Ship extends Entity {
 
     private float respawnTime;
 
-    public Ship() {}
+    public Ship() {
+        id = nextId;
+        ++nextId;
+    }
+
+    public void placeRandom() {
+        x = (rand() - 0.5f) * Game.WIDTH;
+        y = (rand() - 0.5f) * Game.HEIGHT;
+        xv = 0;
+        yv = 0;
+    }
 
     public void spawn() {
-        this.xv = 0;
-        this.yv = 0;
-        this.shieldTime = startShieldTime;
-        this.hp = 2;
+        shieldTime = startShieldTime;
+        hp = 2;
         effectSpawn();
     }
 
@@ -161,9 +173,9 @@ public class Ship extends Entity {
 
     private void effectExhaust(float delta) {
         Game.addLocalEntity(new Particle(
-            x + xv * delta, y + yv * delta, a + av * delta, -size * 0.6f, -4,
+            x + xv * delta, y + yv * delta, a + av * delta, -size * 0.6f, -4 * (float)Math.pow(Particle.frictionMultiplier, delta),
             1, 0.5f, 0, 1,
-            1.5f + rand() * 0.3f, 0.15f
+            1.7f, 0.15f
         ));
     }
 
