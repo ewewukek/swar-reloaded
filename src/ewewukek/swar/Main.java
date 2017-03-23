@@ -13,6 +13,7 @@ import static org.lwjgl.opengl.GL20.*;
 
 import java.net.InetAddress;
 
+import ewewukek.Installer;
 import static ewewukek.swar.Util.*;
 
 public class Main {
@@ -162,8 +163,9 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        System.out.println("LWJGL "+Sys.getVersion());
         try {
+            Installer.install("swar");
+            System.out.println("LWJGL "+Sys.getVersion());
             start();
             Display.destroy();
             System.exit(0);
