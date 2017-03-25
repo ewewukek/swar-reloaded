@@ -313,7 +313,7 @@ public class Batch {
             "float a = abs(sqrt(l.x * l.x + l.y * l.y) - lo);\n"+
             "float t = (sign(lw - a) + 1.0) * 0.5;\n"+
             "a = t + (1.0 - t) * (1.0 - (a-lw)/g) / (1.0 + f * (a-lw)/g);\n"+
-            "gl_FragColor = vec4(c.rgb, c.a * a);\n"+
+            "gl_FragColor = vec4(c.rgb * a, c.a);\n"+
             "}"
         );
         glCompileShader(fs);

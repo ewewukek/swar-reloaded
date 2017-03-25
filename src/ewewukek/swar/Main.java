@@ -54,7 +54,7 @@ public class Main {
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
         glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_DST_ALPHA);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
         float tickTime = time();
 
