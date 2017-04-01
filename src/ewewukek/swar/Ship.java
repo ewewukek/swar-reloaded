@@ -242,7 +242,7 @@ public class Ship extends Entity {
     private static final float[] lx = new float[22];
     private static final float[] ly = new float[22];
     private static final float[] gs = new float[22];
-    private static final int[] tris = new int[] {
+    private static final short[] tris = new short[] {
         0,  4,  5,
         0,  5,  6,
         0,  6,  7,

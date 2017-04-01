@@ -116,7 +116,7 @@ public class Game {
     private static final float[] markerX = new float[] { 0, -7.5f,  7.5f };
     private static final float[] markerY = new float[] { 0,  7.5f,  7.5f };
     private static final float[] markerL = new float[] { 0, 0, 0 };
-    private static final int[] markerTris = new int[] { 0, 1, 2 };
+    private static final short[] markerTris = new short[] { 0, 1, 2 };
 
     public static void draw(Batch batch, float delta) {
         batch.clear();

@@ -1,7 +1,7 @@
 package ewewukek.swar;
 
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
+import java.nio.ByteBuffer;
+import java.nio.ShortBuffer;
 import org.lwjgl.BufferUtils;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -15,6 +15,9 @@ public class Batch {
     private static final int ATTRIBUTE_POSITION_LINEDIR = 0;
     private static final int ATTRIBUTE_COLOR = 1;
 
+    private static final float POSITION_SCALE = 2;
+    private static final float LINEDIR_SCALE = 64;
+
     private static int fs;
     private static int vs;
     private static int program;
@@ -25,11 +28,11 @@ public class Batch {
     private static final int vertexCapacity = 10240;
     private static final int triangleCapacity = 10240;
 
-    private FloatBuffer fb = BufferUtils.createFloatBuffer(vertexCapacity * 12);
-    private int vertexCount;
+    private ByteBuffer vb = BufferUtils.createByteBuffer(vertexCapacity * 12);
+    private short vertexCount;
     private int vboVertices;
 
-    private IntBuffer ib = BufferUtils.createIntBuffer(triangleCapacity * 3);
+    private ShortBuffer ib = BufferUtils.createShortBuffer(triangleCapacity * 3);
     private int triangleCount;
     private int vboIndices;
 
@@ -108,7 +111,7 @@ public class Batch {
     }
 
     public void clear() {
-        fb.clear();
+        vb.clear();
         vertexCount = 0;
         ib.clear();
         triangleCount = 0;
@@ -119,7 +122,7 @@ public class Batch {
         final float[] ax = new float[] { 0, -1,  1,  1, -1 };
         final float[] ay = new float[] { 0,  1,  1, -1, -1 };
         final float[] gs = new float[] { 0,  1,  1,  1,  1 };
-        final int[] tris = new int[] {
+        final short[] tris = new short[] {
             0, 1, 2,
             0, 2, 3,
             0, 3, 4,
@@ -135,10 +138,10 @@ public class Batch {
             putLinedir(ax[i] * r, ay[i] * r);
             putProperties();
         }
-        int i0 = vertexCount;
+        short i0 = vertexCount;
         vertexCount += 5;
         for (int i = 0; i != tris.length; ++i) {
-            ib.put(i0 + tris[i]);
+            ib.put((short)(i0 + tris[i]));
         }
         triangleCount += tris.length / 3;
     }
@@ -147,7 +150,7 @@ public class Batch {
         final float[] ae = new float[] { 0,  0, -1, -1,  0 };
         final float[] an = new float[] { 0, -1, -1,  1,  1 };
         final float[] gs = new float[] { 0,  1,  1,  1,  1 };
-        final int[] tris = new int[] {
+        final short[] tris = new short[] {
             0, 1, 2,
             0, 2, 3,
             0, 3, 4,
@@ -189,15 +192,15 @@ public class Batch {
                 (-ey * ae[i] - ex * an[i]) * r);
             putProperties();
         }
-        int i0 = vertexCount;
+        short i0 = vertexCount;
         vertexCount += 10;
         for (int i = 0; i != tris.length; ++i) {
-            ib.put(i0 + tris[i]);
+            ib.put((short)(i0 + tris[i]));
         }
         triangleCount += tris.length / 3;
     }
 
-    public void addArrays(float[] x, float[] y, float[] lx, float[] ly, float[] gs, int[] tris) {
+    public void addArrays(float[] x, float[] y, float[] lx, float[] ly, float[] gs, short[] tris) {
         if (vertexCount + x.length >= vertexCapacity || triangleCount + tris.length / 3 >= triangleCapacity) {
             draw();
             clear();
@@ -207,10 +210,10 @@ public class Batch {
             putLinedir(lx[i], ly[i]);
             putProperties();
         }
-        int i0 = vertexCount;
+        short i0 = vertexCount;
         vertexCount += x.length;
         for (int i = 0; i != tris.length; ++i) {
-            ib.put(i0 + tris[i]);
+            ib.put((short)(i0 + tris[i]));
         }
         triangleCount += tris.length / 3;
     }
@@ -227,27 +230,41 @@ public class Batch {
         glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
         glEnableVertexAttribArray(ATTRIBUTE_COLOR);
 
-        glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 4, GL_FLOAT, false, 8 * 4, 0);
-        glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_FLOAT, false, 8 * 4, 4 * 4);
+        glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 4, GL_SHORT, true, 12, 0);
+        glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_UNSIGNED_BYTE, true, 12, 8);
 
-        glDrawElements(GL_TRIANGLES, 3 * triangleCount, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 3 * triangleCount, GL_UNSIGNED_SHORT, 0);
+    }
+
+    private void putFloat16(float fvalue, float scale) {
+        if (fvalue < -scale) fvalue = scale;
+        if (fvalue > scale) fvalue = scale;
+        fvalue /= scale;
+        vb.putShort((short)(fvalue * Short.MAX_VALUE));
+    }
+
+    private void putFloatU8(float fvalue, float scale) {
+        if (fvalue < 0) fvalue = 0;
+        if (fvalue > scale) fvalue = scale;
+        fvalue /= scale;
+        vb.put((byte)(fvalue * 255));
     }
 
     private void putPosition(float x, float y, float ox, float oy, float gs) {
-        fb.put( ( rotCos * (x + ox) + rotSin * (y + oy) + xOrigin + glowShiftX * gs) * xScale );
-        fb.put( (-rotSin * (x + ox) + rotCos * (y + oy) + yOrigin + glowShiftY * gs) * yScale );
+        putFloat16( ( rotCos * (x + ox) + rotSin * (y + oy) + xOrigin + glowShiftX * gs) * xScale, POSITION_SCALE );
+        putFloat16( (-rotSin * (x + ox) + rotCos * (y + oy) + yOrigin + glowShiftY * gs) * yScale, POSITION_SCALE );
     }
 
     private void putLinedir(float x, float y) {
-        fb.put( rotCos * x + rotSin * y );
-        fb.put(-rotSin * x + rotCos * y );
+        putFloat16( rotCos * x + rotSin * y, LINEDIR_SCALE );
+        putFloat16(-rotSin * x + rotCos * y, LINEDIR_SCALE );
     }
 
     private void putProperties() {
-        fb.put(colorR);
-        fb.put(colorG);
-        fb.put(colorB);
-        fb.put(colorA);
+        putFloatU8(colorR, 1);
+        putFloatU8(colorG, 1);
+        putFloatU8(colorB, 1);
+        putFloatU8(colorA, 1);
     }
 
     private void upload() {
@@ -255,8 +272,8 @@ public class Batch {
 
         if (vboVertices == 0) vboVertices = glGenBuffers();
         glBindBuffer(GL_ARRAY_BUFFER, vboVertices);
-        fb.flip();
-        glBufferData(GL_ARRAY_BUFFER, fb, GL_DYNAMIC_DRAW);
+        vb.flip();
+        glBufferData(GL_ARRAY_BUFFER, vb, GL_DYNAMIC_DRAW);
 
         if (vboIndices == 0) vboIndices = glGenBuffers();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vboIndices);
@@ -279,9 +296,11 @@ public class Batch {
             "varying vec2 l;\n"+
             "varying vec4 c;\n"+
             "void main() {\n"+
-            "l = position_linedir.zw;\n"+
+            "const float ps = "+String.format("%.1f", POSITION_SCALE)+";\n"+
+            "const float ls = "+String.format("%.1f", LINEDIR_SCALE)+";\n"+
+            "l = position_linedir.zw * ls;\n"+
             "c = color;\n"+
-            "gl_Position = vec4(position_linedir.xy, 0.0, 1.0);\n"+
+            "gl_Position = vec4(position_linedir.xy * ps, 0.0, 1.0);\n"+
             "}"
         );
         glCompileShader(vs);
