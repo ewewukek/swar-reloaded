@@ -66,7 +66,6 @@ public class Main {
             glClear(GL_COLOR_BUFFER_BIT);
 
             batch.clear();
-
             batch.setDefaults();
             for (int i = 0; i != starCount; ++i) {
                 float c = starLuminosity[i] * (rand() * 0.2f + 0.8f);
@@ -76,11 +75,10 @@ public class Main {
                 batch.setColor(redShift * c, greenShift * c, blueShift * c, 1);
                 batch.addPoint(starX[i], starY[i]);
             }
+            batch.draw();
 
             float delta = (time() - tickTime) / Game.TIME_STEP;
             Game.draw(batch, delta);
-
-            batch.draw();
 
             Display.update();
             Display.sync(60);

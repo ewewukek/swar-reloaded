@@ -9,16 +9,18 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 
 public class Batch {
+    public static final float lineWidth = 0.5f;
+    public static final float falloffMultiplier = 10;
+
     private static final int ATTRIBUTE_POSITION_LINEDIR = 0;
     private static final int ATTRIBUTE_COLOR = 1;
-    private static final int ATTRIBUTE_LINE_WIDTH = 2;
-    private static final int ATTRIBUTE_LINE_OFFSET = 3;
-    private static final int ATTRIBUTE_GLOW_RADIUS = 4;
-    private static final int ATTRIBUTE_FALLOFF_MULTIPLIER = 5;
 
     private static int fs;
     private static int vs;
     private static int program;
+
+    private static int uLineOffset;
+    private static int uGlowRadius;
 
     private static final int vertexCapacity = 10240;
     private static final int triangleCapacity = 10240;
@@ -33,10 +35,8 @@ public class Batch {
 
     private boolean uploaded;
 
-    private float lineWidth;
     private float lineOffset;
     private float glowRadius;
-    private float falloffMultiplier;
 
     private float colorR;
     private float colorG;
@@ -71,10 +71,8 @@ public class Batch {
         colorG = 1;
         colorB = 1;
         colorA = 1;
-        lineWidth = 0.5f;
         lineOffset = 0;
         glowRadius = 10;
-        falloffMultiplier = 10;
         glowShiftX = 0;
         glowShiftY = 0;
     }
@@ -96,11 +94,12 @@ public class Batch {
         colorA = a;
     }
 
-    public void setLineParams(float lw, float lo, float g, float fm) {
-        lineWidth = lw;
+    public void setLineOffset(float lo) {
         lineOffset = lo;
+    }
+
+    public void setGlowRadius(float g) {
         glowRadius = g;
-        falloffMultiplier = fm;
     }
 
     public void setGlowShift(float x, float y) {
@@ -198,13 +197,13 @@ public class Batch {
         triangleCount += tris.length / 3;
     }
 
-    public void addArrays(float[] x, float[] y, float[] lx, float[] ly, int[] tris, float[] gs) {
+    public void addArrays(float[] x, float[] y, float[] lx, float[] ly, float[] gs, int[] tris) {
         if (vertexCount + x.length >= vertexCapacity || triangleCount + tris.length / 3 >= triangleCapacity) {
             draw();
             clear();
         }
         for (int i = 0; i != x.length; ++i) {
-            putPosition(x[i], y[i], 0, 0, gs[i]);
+            putPosition(x[i], y[i], 0, 0, gs != null ? gs[i] : 0);
             putLinedir(lx[i], ly[i]);
             putProperties();
         }
@@ -220,12 +219,16 @@ public class Batch {
         if (triangleCount == 0) return;
         upload();
 
-        glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 4, GL_FLOAT, false, 12 * 4, 0);
-        glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_FLOAT, false, 12 * 4, 4 * 4);
-        glVertexAttribPointer(ATTRIBUTE_LINE_WIDTH, 1, GL_FLOAT, false, 12 * 4, 8 * 4);
-        glVertexAttribPointer(ATTRIBUTE_LINE_OFFSET, 1, GL_FLOAT, false, 12 * 4, 9 * 4);
-        glVertexAttribPointer(ATTRIBUTE_GLOW_RADIUS, 1, GL_FLOAT, false, 12 * 4, 10 * 4);
-        glVertexAttribPointer(ATTRIBUTE_FALLOFF_MULTIPLIER, 1, GL_FLOAT, false, 12 * 4, 11 * 4);
+        glUseProgram(program);
+
+        glUniform1f(uLineOffset, lineOffset);
+        glUniform1f(uGlowRadius, glowRadius);
+
+        glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
+        glEnableVertexAttribArray(ATTRIBUTE_COLOR);
+
+        glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 4, GL_FLOAT, false, 8 * 4, 0);
+        glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_FLOAT, false, 8 * 4, 4 * 4);
 
         glDrawElements(GL_TRIANGLES, 3 * triangleCount, GL_UNSIGNED_INT, 0);
     }
@@ -245,10 +248,6 @@ public class Batch {
         fb.put(colorG);
         fb.put(colorB);
         fb.put(colorA);
-        fb.put(lineWidth);
-        fb.put(lineOffset);
-        fb.put(glowRadius);
-        fb.put(falloffMultiplier);
     }
 
     private void upload() {
@@ -277,47 +276,36 @@ public class Batch {
             "#version 120\n"+
             "attribute vec4 position_linedir;\n"+
             "attribute vec4 color;\n"+
-            "attribute float line_width;\n"+
-            "attribute float line_offset;\n"+
-            "attribute float glow_radius;\n"+
-            "attribute float falloff_multiplier;\n"+
             "varying vec2 l;\n"+
             "varying vec4 c;\n"+
-            "varying float lw;\n"+
-            "varying float lo;\n"+
-            "varying float g;\n"+
-            "varying float f;\n"+
             "void main() {\n"+
             "l = position_linedir.zw;\n"+
             "c = color;\n"+
-            "lw = line_width;\n"+
-            "lo = line_offset;\n"+
-            "g = glow_radius;\n"+
-            "f = falloff_multiplier;\n"+
             "gl_Position = vec4(position_linedir.xy, 0.0, 1.0);\n"+
             "}"
         );
         glCompileShader(vs);
-        assertShaderCompileStatus(vs);
+        assertShaderCompileStatus(vs, "vertex");
 
         fs = glCreateShader(GL_FRAGMENT_SHADER);
         glShaderSource(fs,
             "#version 120\n"+
             "varying vec2 l;\n"+
             "varying vec4 c;\n"+
-            "varying float lw;\n"+
-            "varying float lo;\n"+
-            "varying float g;\n"+
-            "varying float f;\n"+
+            "uniform float lo;\n"+
+            "uniform float gr;\n"+
             "void main() {\n"+
-            "float a = abs(sqrt(l.x * l.x + l.y * l.y) - lo);\n"+
-            "float t = (sign(lw - a) + 1.0) * 0.5;\n"+
-            "a = t + (1.0 - t) * (1.0 - (a-lw)/g) / (1.0 + f * (a-lw)/g);\n"+
-            "gl_FragColor = vec4(c.rgb * a, c.a);\n"+
+            "const float lw = "+String.format("%.1f", lineWidth)+";\n"+
+            "const float fm = "+String.format("%.1f", falloffMultiplier)+";\n"+
+            "float d = abs(sqrt(l.x * l.x + l.y * l.y) - lo);\n"+
+            "float x = (d - lw) / gr;\n"+
+            "float t = sign(1.0 + sign(x));\n"+
+            "float v = (1.0 - t) + t * (1.0 - x) / (1.0 + fm * x);\n"+
+            "gl_FragColor = vec4(c.rgb * v, c.a);\n"+
             "}"
         );
         glCompileShader(fs);
-        assertShaderCompileStatus(fs);
+        assertShaderCompileStatus(fs, "fragment");
 
         program = glCreateProgram();
         glAttachShader(program, vs);
@@ -325,25 +313,17 @@ public class Batch {
 
         glBindAttribLocation(program, ATTRIBUTE_POSITION_LINEDIR, "position_linedir");
         glBindAttribLocation(program, ATTRIBUTE_COLOR, "color");
-        glBindAttribLocation(program, ATTRIBUTE_LINE_WIDTH, "line_width");
-        glBindAttribLocation(program, ATTRIBUTE_LINE_OFFSET, "line_offset");
-        glBindAttribLocation(program, ATTRIBUTE_GLOW_RADIUS, "glow_radius");
-        glBindAttribLocation(program, ATTRIBUTE_FALLOFF_MULTIPLIER, "falloffMultiplier");
 
         glLinkProgram(program);
-        glUseProgram(program);
+        assertProgramLinkStatus(program);
 
-        glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
-        glEnableVertexAttribArray(ATTRIBUTE_COLOR);
-        glEnableVertexAttribArray(ATTRIBUTE_LINE_WIDTH);
-        glEnableVertexAttribArray(ATTRIBUTE_LINE_OFFSET);
-        glEnableVertexAttribArray(ATTRIBUTE_GLOW_RADIUS);
-        glEnableVertexAttribArray(ATTRIBUTE_FALLOFF_MULTIPLIER);
+        uLineOffset = glGetUniformLocation(program, "lo");
+        uGlowRadius = glGetUniformLocation(program, "gr");
     }
 
-    private static void assertShaderCompileStatus(int shader) {
+    private static void assertShaderCompileStatus(int shader, String name) {
         if (glGetShaderi(shader, GL_COMPILE_STATUS) != GL_TRUE) {
-            System.err.println("vs: "+glGetShaderInfoLog(shader, glGetShaderi(shader, GL_INFO_LOG_LENGTH)));
+            System.err.println(name+": "+glGetShaderInfoLog(shader, glGetShaderi(shader, GL_INFO_LOG_LENGTH)));
             System.exit(1);
         }
     }

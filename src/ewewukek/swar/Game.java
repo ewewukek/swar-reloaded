@@ -21,9 +21,10 @@ public class Game {
 
     private long tick = 0;
 
-    private static List<Entity> localEntities = new ArrayList<Entity>();
-    public static List<Entity> ships = new ArrayList<Entity>();
-    public static List<Entity> shots = new ArrayList<Entity>();
+    private static List<Particle> particles = new ArrayList<Particle>();
+    private static List<ShipPart> shipParts = new ArrayList<ShipPart>();
+    public static List<Ship> ships = new ArrayList<Ship>();
+    public static List<Shot> shots = new ArrayList<Shot>();
 
     // private static Client client;
     // private static Server server;
@@ -33,16 +34,17 @@ public class Game {
     private static Ship playerShip;
 
     public static void reset() {
-        localEntities.clear();
+        particles.clear();
+        shipParts.clear();
         ships.clear();
         shots.clear();
         playerShip = null;
     }
 
     public static Ship findShip(int id) {
-        Iterator<Entity> shipIt = ships.iterator();
-        while (shipIt.hasNext()) {
-            Ship ship = (Ship)shipIt.next();
+        Iterator<Ship> it = ships.iterator();
+        while (it.hasNext()) {
+            Ship ship = it.next();
             if (ship.id == id) return ship;
         }
         if (playerShip != null && playerShip.id == id) {
@@ -69,8 +71,12 @@ public class Game {
         shots.add(shot);
     }
 
-    public static void addLocalEntity(Entity e) {
-        localEntities.add(e);
+    public static void addParticle(Particle p) {
+        particles.add(p);
+    }
+
+    public static void addShipPart(ShipPart sp) {
+        shipParts.add(sp);
     }
 
     public static void addBot(int team) {
@@ -107,35 +113,47 @@ public class Game {
         playerShip.keyFire = fire;
     }
 
-    private static void drawList(List<Entity> list, Batch batch, float delta) {
-        Iterator<Entity> it = list.iterator();
-        while (it.hasNext()) {
-            Entity e = (Entity)it.next();
-            e.draw(batch, delta);
-        }
-    }
-
     private static final float[] markerX = new float[] { 0, -7.5f,  7.5f };
     private static final float[] markerY = new float[] { 0,  7.5f,  7.5f };
     private static final float[] markerL = new float[] { 0, 0, 0 };
     private static final int[] markerTris = new int[] { 0, 1, 2 };
 
     public static void draw(Batch batch, float delta) {
-        drawList(ships, batch, delta);
-        drawList(shots, batch, delta);
-        drawList(localEntities, batch, delta);
+        batch.clear();
+        batch.setDefaults();
+        for (Iterator<Particle> it = particles.iterator(); it.hasNext(); it.next().draw(batch, delta));
+        batch.draw();
+
+        batch.clear();
+        for (Iterator<Shot> it = shots.iterator(); it.hasNext(); it.next().draw(batch, delta));
+        batch.draw();
+
+        batch.clear();
+        for (Iterator<Ship> it = ships.iterator(); it.hasNext(); it.next().draw(batch, delta));
+        batch.draw();
+
+        batch.clear();
+        for (Iterator<ShipPart> it = shipParts.iterator(); it.hasNext(); it.next().draw(batch, delta));
+        batch.draw();
+
+        batch.clear();
+        for (Iterator<Ship> it = ships.iterator(); it.hasNext(); it.next().drawShield(batch, delta));
+        batch.draw();
+
         if (playerShip != null) {
+            batch.clear();
             batch.setDefaults();
             batch.setOrigin(
                 playerShip.x + playerShip.xv * delta,
                 playerShip.y + Ship.size + 5f + playerShip.yv * delta
             );
-            batch.addArrays(markerX, markerY, markerL, markerL, markerTris, markerL);
+            batch.addArrays(markerX, markerY, markerL, markerL, null, markerTris);
+            batch.draw();
         }
     }
 
-    private static void updateList(List<Entity> list) {
-        Iterator<Entity> it = list.iterator();
+    private static void updateList(List<? extends Entity> list) {
+        Iterator<? extends Entity> it = list.iterator();
         while (it.hasNext()) {
             Entity e = (Entity)it.next();
             if (!e.update()) {
@@ -147,7 +165,8 @@ public class Game {
     public static void update() {
         updateList(ships);
         updateList(shots);
-        updateList(localEntities);
+        updateList(particles);
+        updateList(shipParts);
 
         // if (client != null) {
             // Connection c = client.getConnection();
@@ -165,12 +184,12 @@ public class Game {
             // return;
         // }
 
-        Iterator<Entity> shotIt = shots.iterator();
+        Iterator<Shot> shotIt = shots.iterator();
         while (shotIt.hasNext()) {
-            Shot shot = (Shot)shotIt.next();
-            Iterator<Entity> shipIt = ships.iterator();
+            Shot shot = shotIt.next();
+            Iterator<Ship> shipIt = ships.iterator();
             while (shipIt.hasNext()) {
-                Ship ship = (Ship)shipIt.next();
+                Ship ship = shipIt.next();
                 if (ship.team == shot.team || !ship.alive()) continue;
                 if (dist(ship.x, ship.y, shot.x, shot.y) < Ship.size) {
                     ship.hit();

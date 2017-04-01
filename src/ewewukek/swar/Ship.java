@@ -6,8 +6,9 @@ import static ewewukek.swar.Util.*;
 
 public class Ship extends Entity {
     public static final float size = 17.5f;
-    public static final float glowRadius = 25;
-    public static final float falloffMultiplier = 6.5f;
+    public static final float glowRadius = 35;
+    public static final float shieldGlowRadius = 10;
+    public static final float shieldRadius = size + shieldGlowRadius;
 
     public static final float acceleration = 5;
     public static final float maxVelocity = 12;
@@ -142,13 +143,15 @@ public class Ship extends Entity {
         float s = rand();
         float dx = xv * (0.3f + s * 0.2f) * glowRadius / maxVelocity;
         float dy = yv * (0.3f + s * 0.2f) * glowRadius / maxVelocity;
-        float shieldLuminance = Math.min(1, 0.5f + 2 * (shieldTime - 0.05f * delta));
         float cm = 1;
         if (hp < 1) {
             cm = (respawnTime - time()) * 1.5f;
             cm = cm - (int)cm;
             cm = Math.abs(cm - 0.5f) + 0.25f;
         }
+        batch.setColor(cm * teamColorR[team], cm * teamColorG[team], cm * teamColorB[team], 1);
+        batch.setGlowRadius(Ship.glowRadius);
+        batch.setGlowShift(-dx, -dy);
         for (int i = -1; i != 2; ++i) {
             for (int j = -1; j != 2; ++j) {
                 if (x + i * Game.WIDTH + size + glowRadius > -Game.WIDTH / 2
@@ -156,14 +159,27 @@ public class Ship extends Entity {
                  && y + j * Game.HEIGHT + size + glowRadius > -Game.HEIGHT / 2
                  && y + j * Game.HEIGHT - size - glowRadius < Game.HEIGHT / 2) {
                     batch.setOrigin(x + xv * delta + i * Game.WIDTH, y + yv * delta + j * Game.HEIGHT);
-                    batch.setColor(cm * teamColorR[team], cm * teamColorG[team], cm * teamColorB[team], 1);
-                    batch.setLineParams(0.5f, 0, glowRadius, falloffMultiplier);
-                    batch.setGlowShift(-dx, -dy);
-                    batch.addArrays(px, py, lx, ly, tris, gs);
+                    batch.addArrays(px, py, lx, ly, gs, tris);
+                }
+            }
+        }
+    }
+
+    public void drawShield(Batch batch, float delta) {
+        if (hp < 1 || shieldTime <= 0) return;
+        float shieldLuminance = Math.min(1, 0.5f + 2 * (shieldTime - 0.05f * delta));
+        batch.setColor(0, shieldLuminance, shieldLuminance * 0.8f, 1);
+        batch.setLineOffset(Ship.shieldRadius);
+        batch.setGlowRadius(Ship.shieldGlowRadius);
+        batch.setGlowShift(0, 0);
+        for (int i = -1; i != 2; ++i) {
+            for (int j = -1; j != 2; ++j) {
+                if (x + i * Game.WIDTH + size + glowRadius > -Game.WIDTH / 2
+                 && x + i * Game.WIDTH - size - glowRadius < Game.WIDTH / 2
+                 && y + j * Game.HEIGHT + size + glowRadius > -Game.HEIGHT / 2
+                 && y + j * Game.HEIGHT - size - glowRadius < Game.HEIGHT / 2) {
+                    batch.setOrigin(x + xv * delta + i * Game.WIDTH, y + yv * delta + j * Game.HEIGHT);
                     if (hp > 0 && shieldTime > 0) {
-                        batch.setColor(0, shieldLuminance, shieldLuminance * 0.8f, 1);
-                        batch.setLineParams(0.5f, size + 10, 10, falloffMultiplier);
-                        batch.setGlowShift(0, 0);
                         batch.addPoint(0, 0);
                     }
                 }
@@ -172,7 +188,7 @@ public class Ship extends Entity {
     }
 
     private void effectExhaust(float delta) {
-        Game.addLocalEntity(new Particle(
+        Game.addParticle(new Particle(
             x + xv * delta, y + yv * delta, a + av * delta, -size * 0.6f, -4 * (float)Math.pow(Particle.frictionMultiplier, delta),
             1, 0.5f, 0, 1,
             1.7f, 0.15f
@@ -181,7 +197,7 @@ public class Ship extends Entity {
 
     private void effectSpawn() {
         for (int i = 0; i != 25; ++i) {
-            Game.addLocalEntity(new Particle(
+            Game.addParticle(new Particle(
                 x, y,
                 rand() * 2 * (float)Math.PI,
                 rand() * 10,
@@ -194,7 +210,7 @@ public class Ship extends Entity {
 
     private void effectExplosion() {
         for (int i = 0; i != 50; ++i) {
-            Game.addLocalEntity(new Particle(
+            Game.addParticle(new Particle(
                 x, y,
                 rand() * 2 * (float)Math.PI,
                 rand() * 10,
@@ -203,19 +219,19 @@ public class Ship extends Entity {
                 1.2f + rand() * 0.3f, 0.035f
             ));
         }
-        Game.addLocalEntity(new ShipPart(
+        Game.addShipPart(new ShipPart(
             x, y, a, xv, yv, team,
             px[0], py[0], px[1], py[1]
         ));
-        Game.addLocalEntity(new ShipPart(
+        Game.addShipPart(new ShipPart(
             x, y, a, xv, yv, team,
             px[0], py[0], px[3], py[3]
         ));
-        Game.addLocalEntity(new ShipPart(
+        Game.addShipPart(new ShipPart(
             x, y, a, xv, yv, team,
             px[1], py[1], px[2], py[2]
         ));
-        Game.addLocalEntity(new ShipPart(
+        Game.addShipPart(new ShipPart(
             x, y, a, xv, yv, team,
             px[2], py[2], px[3], py[3]
         ));

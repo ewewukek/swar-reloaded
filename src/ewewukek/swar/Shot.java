@@ -5,6 +5,7 @@ import static ewewukek.swar.Util.*;
 public class Shot extends Entity {
     public static final float speed = 20f;
     public static final float length = 15f;
+    public static final float glowRadius = 25;
 
     private static int nextId = 1;
 
@@ -42,6 +43,7 @@ public class Shot extends Entity {
 
     @Override
     public void draw(Batch batch, float delta) {
+        batch.setDefaults();
         batch.setOrigin(x + xv * delta, y + yv * delta);
         batch.setRotation(a);
         batch.setColor(
@@ -50,7 +52,7 @@ public class Shot extends Entity {
             Ship.teamColorB[team],
             1
         );
-        batch.setLineParams(0.5f, 0, 15, 6.5f);
+        batch.setGlowRadius(Shot.glowRadius);
         batch.setGlowShift(-xv * 20 / speed, -yv * 20 / speed);
         batch.addLine(0, 0, 0, -length);
     }
@@ -59,7 +61,7 @@ public class Shot extends Entity {
         for (int i = 0; i != 20; ++i) {
             float a = rand() * 2 * (float)Math.PI;
             float r = 1 + rand() * 9;
-            Game.addLocalEntity(new Particle(
+            Game.addParticle(new Particle(
                 x, y, a, r, 5,
                 hitShield ? 0.0f : Ship.teamColorR[team],
                 hitShield ? 1.0f : Ship.teamColorG[team],

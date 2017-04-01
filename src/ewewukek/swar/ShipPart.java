@@ -3,6 +3,7 @@ package ewewukek.swar;
 import static ewewukek.swar.Util.*;
 
 public class ShipPart extends Entity {
+    public static final float glowRadius = 25;
     private float luminosity;
 
     private int team;
@@ -56,7 +57,7 @@ public class ShipPart extends Entity {
             Ship.teamColorB[team] * cm,
             1
         );
-        batch.setLineParams(0.5f, 0, Ship.glowRadius, Ship.falloffMultiplier);
+        batch.setGlowRadius(glowRadius);
         batch.setGlowShift(-xv, -yv);
         batch.addLine(x1, y1, x2, y2);
     }

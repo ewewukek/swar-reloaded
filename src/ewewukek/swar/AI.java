@@ -10,9 +10,9 @@ public abstract class AI {
     protected Ship findEnemy(Ship self) {
         Ship closest = null;
         float closest_dist = 0;
-        Iterator<Entity> it = Game.ships.iterator();
+        Iterator<Ship> it = Game.ships.iterator();
         while (it.hasNext()) {
-            Ship other = (Ship)it.next();
+            Ship other = it.next();
             if (other.team == self.team || !other.alive()) continue;
             float d = dist(self.x, self.y, other.x, other.y);
             if (closest == null || d < closest_dist) {
