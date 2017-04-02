@@ -49,19 +49,14 @@ public class Batch {
     private float xOrigin;
     private float yOrigin;
 
-    private float xScale;
-    private float yScale;
-
     private float rotSin;
     private float rotCos;
 
     private float glowShiftX;
     private float glowShiftY;
 
-    public Batch(int width, int height) {
+    public Batch() {
         init();
-        xScale = 2.0f / width;
-        yScale = 2.0f / height;
         setDefaults();
     }
 
@@ -134,7 +129,7 @@ public class Batch {
         }
         float r = lineOffset + lineWidth + glowRadius;
         for (int i = 0; i != 5; ++i) {
-            putPosition(ax[i] * r, ay[i] * r, x, y, gs[i]);
+            putPosition(ax[i] * r + x, ay[i] * r + y, gs[i]);
             putLinedir(ax[i] * r, ay[i] * r);
             putProperties();
         }
@@ -174,9 +169,9 @@ public class Batch {
         float r = lineOffset + lineWidth + glowRadius;
         for (int i = 0; i != 5; ++i) {
             putPosition(
-                (ex * ae[i] - ey * an[i]) * r,
-                (ey * ae[i] + ex * an[i]) * r,
-                x1, y1, gs[i]);
+                (ex * ae[i] - ey * an[i]) * r + x1,
+                (ey * ae[i] + ex * an[i]) * r + y1,
+                gs[i]);
             putLinedir(
                 (ex * ae[i] - ey * an[i]) * r,
                 (ey * ae[i] + ex * an[i]) * r);
@@ -184,9 +179,9 @@ public class Batch {
         }
         for (int i = 0; i != 5; ++i) {
             putPosition(
-                (-ex * ae[i] + ey * an[i]) * r,
-                (-ey * ae[i] - ex * an[i]) * r,
-                x2, y2, gs[i]);
+                (-ex * ae[i] + ey * an[i]) * r + x2,
+                (-ey * ae[i] - ex * an[i]) * r + y2,
+                gs[i]);
             putLinedir(
                 (-ex * ae[i] + ey * an[i]) * r,
                 (-ey * ae[i] - ex * an[i]) * r);
@@ -206,7 +201,7 @@ public class Batch {
             clear();
         }
         for (int i = 0; i != x.length; ++i) {
-            putPosition(x[i], y[i], 0, 0, gs != null ? gs[i] : 0);
+            putPosition(x[i], y[i], gs != null ? gs[i] : 0);
             putLinedir(lx[i], ly[i]);
             putProperties();
         }
@@ -250,9 +245,9 @@ public class Batch {
         vb.put((byte)(fvalue * 255));
     }
 
-    private void putPosition(float x, float y, float ox, float oy, float gs) {
-        putFloat16( ( rotCos * (x + ox) + rotSin * (y + oy) + xOrigin + glowShiftX * gs) * xScale, POSITION_SCALE );
-        putFloat16( (-rotSin * (x + ox) + rotCos * (y + oy) + yOrigin + glowShiftY * gs) * yScale, POSITION_SCALE );
+    private void putPosition(float x, float y, float gs) {
+        putFloat16( ( rotCos * x + rotSin * y + xOrigin + glowShiftX * gs), POSITION_SCALE * Game.WIDTH / 2 );
+        putFloat16( (-rotSin * x + rotCos * y + yOrigin + glowShiftY * gs), POSITION_SCALE * Game.HEIGHT / 2 );
     }
 
     private void putLinedir(float x, float y) {

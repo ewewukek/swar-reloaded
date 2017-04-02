@@ -49,7 +49,7 @@ public class Main {
 
         resize();
 
-        Batch batch = new Batch(Game.WIDTH, Game.HEIGHT);
+        Batch batch = new Batch();
 
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
