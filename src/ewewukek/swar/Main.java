@@ -81,6 +81,7 @@ public class Main {
             Game.draw(batch, delta);
 
             batch.clear();
+            batch.setDefaults();
             batch.setFontScale(0.75f);
             for (int t = 0; t != 4; ++t) {
                 batch.setOrigin(Game.WIDTH / 2, Game.HEIGHT / 2 - t * 40);
