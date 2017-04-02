@@ -24,9 +24,9 @@ public class Ship extends Entity {
     public static final float respawnDelay = 2;
 
     public static final int teamCount = 4;
-    public static final float[] teamColorR = new float[] {     1, 0.5f,  0.1f, 0.85f };
-    public static final float[] teamColorG = new float[] { 0.35f, 0.5f, 0.75f, 0.85f };
-    public static final float[] teamColorB = new float[] { 0.35f,    1,  0.1f,     0 };
+    public static final float[] teamColorR = new float[] { 0.95f, 0.46f, 0.15f, 0.65f };
+    public static final float[] teamColorG = new float[] { 0.35f, 0.46f, 0.67f, 0.65f };
+    public static final float[] teamColorB = new float[] { 0.35f,     1, 0.15f,  0.1f };
 
     private static int nextId = 1;
 
