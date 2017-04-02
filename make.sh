@@ -40,11 +40,11 @@ build)
     ;;
 jar)
     ./make.sh build
-    if [ $? != 0 ]; then exit; fi
+    if [ $? != 0 ]; then exit $?; fi
     unzip -o jar/lwjgl.jar org/**/* -d bin >/dev/null
     unzip -o jar/joml.jar org/**/* -d bin >/dev/null
     mkdir -p build
-    jar cmf manifest build/swar.jar -C bin . native
+    jar cmf manifest build/swar.jar -C bin . native res
     ;;
 *)
     echo "usage: ./make.sh [command]"

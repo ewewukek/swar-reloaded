@@ -26,6 +26,8 @@ public class Game {
     public static List<Ship> ships = new ArrayList<Ship>();
     public static List<Shot> shots = new ArrayList<Shot>();
 
+    public static int[] scores = new int[4];
+
     // private static Client client;
     // private static Server server;
     // private static Map<String, NetworkPlayer> networkPlayers = new HashMap<String, NetworkPlayer>();
@@ -39,6 +41,7 @@ public class Game {
         ships.clear();
         shots.clear();
         playerShip = null;
+        for (int i = 0; i != scores.length; ++i) scores[i] = 0;
     }
 
     public static Ship findShip(int id) {
@@ -194,6 +197,9 @@ public class Game {
                 if (dist(ship.x, ship.y, shot.x, shot.y) < Ship.size) {
                     ship.hit();
                     shot.hit(ship.isShieldActive());
+                    if (!ship.alive()) {
+                        ++scores[shot.team];
+                    }
                     break;
                 }
             }

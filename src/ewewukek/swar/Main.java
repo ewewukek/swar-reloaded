@@ -80,6 +80,15 @@ public class Main {
             float delta = (time() - tickTime) / Game.TIME_STEP;
             Game.draw(batch, delta);
 
+            batch.clear();
+            batch.setFontScale(0.75f);
+            for (int t = 0; t != 4; ++t) {
+                batch.setOrigin(Game.WIDTH / 2, Game.HEIGHT / 2 - t * 40);
+                batch.setColor(Ship.teamColorR[t], Ship.teamColorG[t], Ship.teamColorB[t], 1);
+                batch.drawString(""+Game.scores[t], Batch.TEXT_ALIGN_TOP | Batch.TEXT_ALIGN_RIGHT);
+            }
+            batch.drawFont();
+
             Display.update();
             Display.sync(60);
 

@@ -1,10 +1,16 @@
 package ewewukek.swar;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
+import javax.imageio.ImageIO;
 import org.lwjgl.BufferUtils;
 
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL13.*;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 
@@ -12,23 +18,30 @@ public class Batch {
     public static final float lineWidth = 0.5f;
     public static final float falloffMultiplier = 10;
 
-    private static final int ATTRIBUTE_POSITION_LINEDIR = 0;
-    private static final int ATTRIBUTE_COLOR = 1;
+    public static final int TEXT_ALIGN_TOP = 1;
+    public static final int TEXT_ALIGN_RIGHT = 2;
+
+    private static final int ATTRIBUTE_POSITION = 0;
+    private static final int ATTRIBUTE_LINEDIR = 1;
+    private static final int ATTRIBUTE_TEXCOORD = 1;
+    private static final int ATTRIBUTE_COLOR = 2;
 
     private static final float POSITION_SCALE = 2;
     private static final float LINEDIR_SCALE = 64;
 
-    private static int fs;
-    private static int vs;
     private static int program;
+
+    private static int fontTexture;
+    private static int fontProgram;
 
     private static int uLineOffset;
     private static int uGlowRadius;
+    private static int uFontTexture;
 
     private static final int vertexCapacity = 10240;
     private static final int triangleCapacity = 10240;
 
-    private ByteBuffer vb = BufferUtils.createByteBuffer(vertexCapacity * 12);
+    private ByteBuffer vb = BufferUtils.createByteBuffer(vertexCapacity * 10);
     private short vertexCount;
     private int vboVertices;
 
@@ -55,6 +68,8 @@ public class Batch {
     private float glowShiftX;
     private float glowShiftY;
 
+    private float fontScale;
+
     public Batch() {
         init();
         setDefaults();
@@ -73,6 +88,7 @@ public class Batch {
         glowRadius = 10;
         glowShiftX = 0;
         glowShiftY = 0;
+        fontScale = 1;
     }
 
     public void setOrigin(float x, float y) {
@@ -105,6 +121,10 @@ public class Batch {
         glowShiftY = y;
     }
 
+    public void setFontScale(float s) {
+        fontScale = s;
+    }
+
     public void clear() {
         vb.clear();
         vertexCount = 0;
@@ -131,7 +151,7 @@ public class Batch {
         for (int i = 0; i != 5; ++i) {
             putPosition(ax[i] * r + x, ay[i] * r + y, gs[i]);
             putLinedir(ax[i] * r, ay[i] * r);
-            putProperties();
+            putColor();
         }
         short i0 = vertexCount;
         vertexCount += 5;
@@ -175,7 +195,7 @@ public class Batch {
             putLinedir(
                 (ex * ae[i] - ey * an[i]) * r,
                 (ey * ae[i] + ex * an[i]) * r);
-            putProperties();
+            putColor();
         }
         for (int i = 0; i != 5; ++i) {
             putPosition(
@@ -185,7 +205,7 @@ public class Batch {
             putLinedir(
                 (-ex * ae[i] + ey * an[i]) * r,
                 (-ey * ae[i] - ex * an[i]) * r);
-            putProperties();
+            putColor();
         }
         short i0 = vertexCount;
         vertexCount += 10;
@@ -203,7 +223,7 @@ public class Batch {
         for (int i = 0; i != x.length; ++i) {
             putPosition(x[i], y[i], gs != null ? gs[i] : 0);
             putLinedir(lx[i], ly[i]);
-            putProperties();
+            putColor();
         }
         short i0 = vertexCount;
         vertexCount += x.length;
@@ -222,27 +242,142 @@ public class Batch {
         glUniform1f(uLineOffset, lineOffset);
         glUniform1f(uGlowRadius, glowRadius);
 
-        glEnableVertexAttribArray(ATTRIBUTE_POSITION_LINEDIR);
+        glEnableVertexAttribArray(ATTRIBUTE_POSITION);
+        glEnableVertexAttribArray(ATTRIBUTE_LINEDIR);
         glEnableVertexAttribArray(ATTRIBUTE_COLOR);
 
-        glVertexAttribPointer(ATTRIBUTE_POSITION_LINEDIR, 4, GL_SHORT, true, 12, 0);
-        glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_UNSIGNED_BYTE, true, 12, 8);
+        glVertexAttribPointer(ATTRIBUTE_POSITION, 2, GL_SHORT, true, 10, 0);
+        glVertexAttribPointer(ATTRIBUTE_LINEDIR, 2, GL_BYTE, true, 10, 4);
+        glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_UNSIGNED_BYTE, true, 10, 6);
 
         glDrawElements(GL_TRIANGLES, 3 * triangleCount, GL_UNSIGNED_SHORT, 0);
     }
 
-    private void putFloat16(float fvalue, float scale) {
-        if (fvalue < -scale) fvalue = scale;
-        if (fvalue > scale) fvalue = scale;
-        fvalue /= scale;
-        vb.putShort((short)(fvalue * Short.MAX_VALUE));
+    public float stringWidth(String s) {
+        float w = 0;
+        for (int i = 0; i != s.length(); ++i) {
+            char c = s.charAt(i);
+            if (c == ' ') {
+                w += 20;
+                continue;
+            }
+            Glyph g = Glyph.get(c);
+            if (g != null) w += g.w;
+        }
+        return w * fontScale;
     }
 
-    private void putFloatU8(float fvalue, float scale) {
-        if (fvalue < 0) fvalue = 0;
-        if (fvalue > scale) fvalue = scale;
-        fvalue /= scale;
-        vb.put((byte)(fvalue * 255));
+    public float stringHeight(String s) {
+        float h = 0;
+        for (int i = 0; i != s.length(); ++i) {
+            char c = s.charAt(i);
+            Glyph g = Glyph.get(c);
+            if (g != null && g.h > h) h = g.h;
+        }
+        return h * fontScale;
+    }
+
+    public void drawString(String s) {
+        drawString(s, 0);
+    }
+
+    public void drawString(String s, int flags) {
+        if (vertexCount + 4 >= vertexCapacity || triangleCount + 2 >= triangleCapacity) {
+            drawFont();
+            clear();
+        }
+        float x = 0;
+        float y = 0;
+        if ((flags & TEXT_ALIGN_TOP) != 0) y -= stringHeight(s);
+        if ((flags & TEXT_ALIGN_RIGHT) != 0) x -= stringWidth(s);
+        for (int i = 0; i != s.length(); ++i) {
+            char c = s.charAt(i);
+            if (c == ' ') {
+                x += 20 * fontScale;
+                continue;
+            }
+            Glyph g = Glyph.get(c);
+            if (g == null) continue;
+
+            putPosition(x, y, 0);
+            vb.put((byte)g.x);
+            vb.put((byte)g.y);
+            putColor();
+
+            putPosition(x, y + g.h * fontScale, 0);
+            vb.put((byte)g.x);
+            vb.put((byte)(g.y + g.h));
+            putColor();
+
+            putPosition(x + g.w * fontScale, y + g.h * fontScale, 0);
+            vb.put((byte)(g.x + g.w));
+            vb.put((byte)(g.y + g.h));
+            putColor();
+
+            putPosition(x + g.w * fontScale, y, 0);
+            vb.put((byte)(g.x + g.w));
+            vb.put((byte)g.y);
+            putColor();
+
+            short i0 = vertexCount;
+
+            ib.put((short)i0);
+            ib.put((short)(i0 + 1));
+            ib.put((short)(i0 + 2));
+            ib.put((short)i0);
+            ib.put((short)(i0 + 2));
+            ib.put((short)(i0 + 3));
+
+            vertexCount += 4;
+            triangleCount += 2;
+
+            x += g.w * fontScale;
+        }
+    }
+
+    public void drawFont() {
+        if (triangleCount == 0) return;
+        upload();
+
+        glBindTexture(GL_TEXTURE_2D, fontTexture);
+
+        glUseProgram(fontProgram);
+
+        glUniform1i(uFontTexture, 0);
+
+        glEnableVertexAttribArray(ATTRIBUTE_POSITION);
+        glEnableVertexAttribArray(ATTRIBUTE_TEXCOORD);
+        glEnableVertexAttribArray(ATTRIBUTE_COLOR);
+
+        glVertexAttribPointer(ATTRIBUTE_POSITION, 2, GL_SHORT, true, 10, 0);
+        glVertexAttribPointer(ATTRIBUTE_TEXCOORD, 2, GL_UNSIGNED_BYTE, true, 10, 4);
+        glVertexAttribPointer(ATTRIBUTE_COLOR, 4, GL_UNSIGNED_BYTE, true, 10, 6);
+
+        glDrawElements(GL_TRIANGLES, 3 * triangleCount, GL_UNSIGNED_SHORT, 0);
+    }
+
+    private float normalizeFloat(float value, float scale) {
+        if (value < -scale) value = scale;
+        if (value > scale) value = scale;
+        return value / scale;
+    }
+
+    private float normalizeFloatU(float value, float scale) {
+        if (value < 0) value = 0;
+        if (value > scale) value = scale;
+        return value / scale;
+    }
+
+    private void putFloat16(float value, float scale) {
+        vb.putShort((short)(normalizeFloat(value, scale) * Short.MAX_VALUE));
+    }
+
+    private void putFloat8(float value, float scale) {
+        vb.put((byte)(normalizeFloat(value, scale) * Byte.MAX_VALUE));
+    }
+
+    private void putFloatU8(float value, float scale) {
+        vb.put((byte)(normalizeFloatU(value, scale) * 255));
     }
 
     private void putPosition(float x, float y, float gs) {
@@ -251,11 +386,11 @@ public class Batch {
     }
 
     private void putLinedir(float x, float y) {
-        putFloat16( rotCos * x + rotSin * y, LINEDIR_SCALE );
-        putFloat16(-rotSin * x + rotCos * y, LINEDIR_SCALE );
+        putFloat8( rotCos * x + rotSin * y, LINEDIR_SCALE );
+        putFloat8(-rotSin * x + rotCos * y, LINEDIR_SCALE );
     }
 
-    private void putProperties() {
+    private void putColor() {
         putFloatU8(colorR, 1);
         putFloatU8(colorG, 1);
         putFloatU8(colorB, 1);
@@ -283,25 +418,26 @@ public class Batch {
         if (_init) return;
         _init = true;
 
-        vs = glCreateShader(GL_VERTEX_SHADER);
+        int vs = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vs,
             "#version 120\n"+
-            "attribute vec4 position_linedir;\n"+
+            "attribute vec2 position;\n"+
+            "attribute vec2 linedir;\n"+
             "attribute vec4 color;\n"+
             "varying vec2 l;\n"+
             "varying vec4 c;\n"+
             "void main() {\n"+
             "const float ps = "+String.format("%.1f", POSITION_SCALE)+";\n"+
             "const float ls = "+String.format("%.1f", LINEDIR_SCALE)+";\n"+
-            "l = position_linedir.zw * ls;\n"+
+            "l = linedir * ls;\n"+
             "c = color;\n"+
-            "gl_Position = vec4(position_linedir.xy * ps, 0.0, 1.0);\n"+
+            "gl_Position = vec4(position * ps, 0.0, 1.0);\n"+
             "}"
         );
         glCompileShader(vs);
         assertShaderCompileStatus(vs, "vertex");
 
-        fs = glCreateShader(GL_FRAGMENT_SHADER);
+        int fs = glCreateShader(GL_FRAGMENT_SHADER);
         glShaderSource(fs,
             "#version 120\n"+
             "varying vec2 l;\n"+
@@ -325,7 +461,8 @@ public class Batch {
         glAttachShader(program, vs);
         glAttachShader(program, fs);
 
-        glBindAttribLocation(program, ATTRIBUTE_POSITION_LINEDIR, "position_linedir");
+        glBindAttribLocation(program, ATTRIBUTE_POSITION, "position");
+        glBindAttribLocation(program, ATTRIBUTE_LINEDIR, "linedir");
         glBindAttribLocation(program, ATTRIBUTE_COLOR, "color");
 
         glLinkProgram(program);
@@ -333,6 +470,100 @@ public class Batch {
 
         uLineOffset = glGetUniformLocation(program, "lo");
         uGlowRadius = glGetUniformLocation(program, "gr");
+
+        initFont();
+    }
+
+    private static void initFont() {
+        int vs = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vs,
+            "#version 120\n"+
+            "attribute vec2 position;\n"+
+            "attribute vec2 texcoord;\n"+
+            "attribute vec4 color;\n"+
+            "varying vec2 t;\n"+
+            "varying vec4 c;\n"+
+            "void main() {\n"+
+            "const float ps = "+String.format("%.1f", POSITION_SCALE)+";\n"+
+            "t = texcoord;\n"+
+            "c = color;\n"+
+            "gl_Position = vec4(position * ps, 0.0, 1.0);\n"+
+            "}"
+        );
+        glCompileShader(vs);
+        assertShaderCompileStatus(vs, "vertex");
+
+        int fs = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fs,
+            "#version 120\n"+
+            "varying vec2 t;\n"+
+            "varying vec4 c;\n"+
+            "uniform sampler2D texture;\n"+
+            "void main() {\n"+
+            "vec4 p = texture2D(texture, t);\n"+
+            "gl_FragColor = vec4(p * c);\n"+
+            "}"
+        );
+        glCompileShader(fs);
+        assertShaderCompileStatus(fs, "fragment");
+
+        fontProgram = glCreateProgram();
+        glAttachShader(fontProgram, vs);
+        glAttachShader(fontProgram, fs);
+
+        glBindAttribLocation(fontProgram, ATTRIBUTE_POSITION, "position");
+        glBindAttribLocation(fontProgram, ATTRIBUTE_TEXCOORD, "texcoord");
+        glBindAttribLocation(fontProgram, ATTRIBUTE_COLOR, "color");
+
+        glLinkProgram(fontProgram);
+        assertProgramLinkStatus(fontProgram);
+
+        uFontTexture = glGetUniformLocation(fontProgram, "texture");
+
+        BufferedImage image = null;
+        try {
+            File f = new File("res/font.png");
+            if (f.exists()) {
+                image = ImageIO.read(new FileInputStream(f));
+            } else {
+                image = ImageIO.read(Batch.class.getResourceAsStream("/res/font.png"));
+            }
+        } catch(IOException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+        if (image == null) {
+            System.err.println("could not load texture");
+            System.exit(1);
+        }
+
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        int[] pixels = new int[width * height];
+        image.getRGB(0, 0, width, height, pixels, 0, width);
+
+        ByteBuffer buffer = BufferUtils.createByteBuffer(4 * width * height);
+        for(int y=height-1; y>=0; --y) {
+            for(int x=0; x!=width; ++x) {
+                int pixel = pixels[y*width + x];
+                buffer.put((byte) ((pixel >> 16) & 0xFF)); // R
+                buffer.put((byte) ((pixel >> 8) & 0xFF)); // G
+                buffer.put((byte) (pixel & 0xFF)); // B
+                buffer.put((byte) ((pixel >> 24) & 0xFF)); // A
+            }
+        }
+        buffer.flip();
+
+        fontTexture = glGenTextures();
+
+        glBindTexture(GL_TEXTURE_2D, fontTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
     }
 
     private static void assertShaderCompileStatus(int shader, String name) {
